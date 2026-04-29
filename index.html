@@ -16,25 +16,53 @@
       max-width: 500px; margin: 0 auto;
     }
     h1 { font-size: 1.8rem; display: flex; align-items: center; gap: 8px; margin-bottom: 24px; }
-    .stats {
-      display: flex; gap: 12px; margin-bottom: 28px;
+
+    /* Barre de progression */
+    .budget-bar-container {
+      background: #1e293b; border-radius: 16px; padding: 16px 18px; margin-bottom: 28px;
     }
-    .stat-card {
-      flex: 1; background: #1e293b; border-radius: 16px; padding: 16px;
-      text-align: center;
+    .budget-info {
+      display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;
     }
-    .stat-card .label { font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; }
-    .stat-card .value { font-size: 1.8rem; font-weight: bold; margin-top: 4px; color: #f8fafc; }
-    .categories { margin-bottom: 28px; }
-    .categories h2 { font-size: 1.1rem; margin-bottom: 12px; color: #94a3b8; }
-    .cat-bar { display: flex; align-items: center; margin-bottom: 12px; }
-    .cat-name { width: 90px; font-size: 0.85rem; color: #cbd5e1; }
-    .bar-bg { flex: 1; height: 22px; background: #334155; border-radius: 12px; overflow: hidden; margin: 0 8px; }
-    .bar-fill { height: 100%; border-radius: 12px; transition: width 0.3s; }
-    .cat-amount { width: 70px; font-size: 0.85rem; text-align: right; color: #f1f5f9; }
+    .budget-label { font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; }
+    .budget-amount { font-size: 1.4rem; font-weight: bold; color: #f8fafc; }
+    .budget-total { font-size: 0.9rem; color: #64748b; }
+    .progress-bar-bg {
+      height: 12px; background: #334155; border-radius: 12px; overflow: hidden; margin-top: 8px;
+    }
+    .progress-bar-fill {
+      height: 100%; border-radius: 12px; background: #3b82f6; transition: width 0.3s, background 0.3s;
+    }
+    .progress-bar-fill.warning { background: #f59e0b; }
+    .progress-bar-fill.danger { background: #ef4444; }
+
+    /* Checklist */
+    .recurring-section {
+      background: #1e293b; border-radius: 16px; padding: 18px; margin-bottom: 24px;
+    }
+    .recurring-section h2 {
+      font-size: 1.1rem; color: #94a3b8; margin-bottom: 14px;
+    }
+    .recurring-item {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+    }
+    .recurring-item input[type="checkbox"] {
+      width: 20px; height: 20px; accent-color: #3b82f6; flex-shrink: 0;
+    }
+    .recurring-label {
+      flex: 1; font-size: 0.95rem; color: #e2e8f0; display: flex; flex-direction: column;
+    }
+    .recurring-cat {
+      font-size: 0.7rem; color: #94a3b8; text-transform: uppercase;
+    }
+    .recurring-amount-input {
+      width: 80px; background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+      padding: 6px 8px; color: #f1f5f9; font-size: 0.9rem; text-align: right;
+    }
+
+    /* Form */
     form {
-      background: #1e293b; border-radius: 20px; padding: 20px;
-      margin-bottom: 28px;
+      background: #1e293b; border-radius: 20px; padding: 20px; margin-bottom: 28px;
     }
     form h2 { margin-bottom: 16px; font-size: 1.1rem; color: #94a3b8; }
     .form-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
@@ -48,6 +76,12 @@
       padding: 14px; font-size: 1rem; font-weight: 600; cursor: pointer; width: 100%;
     }
     .btn:active { background: #2563eb; }
+    .reset-btn {
+      background: #ef4444; margin-top: 10px;
+    }
+    .reset-btn:active { background: #dc2626; }
+
+    /* Liste des dépenses */
     .expense-list { margin-top: 12px; }
     .expense-item {
       display: flex; align-items: center; background: #1e293b; border-radius: 16px;
@@ -62,38 +96,49 @@
       background: none; border: none; color: #ef4444; font-size: 1.4rem;
       cursor: pointer; padding: 6px;
     }
+    .recurring-badge {
+      background: #334155; color: #94a3b8; font-size: 0.6rem; padding: 2px 6px;
+      border-radius: 8px; margin-left: 6px; text-transform: uppercase;
+    }
   </style>
 </head>
 <body>
   <h1>💰 Mes Dépenses</h1>
 
-  <div class="stats">
-    <div class="stat-card">
-      <div class="label">Ce mois</div>
-      <div class="value" id="totalMonth">0 €</div>
+  <!-- Barre de budget -->
+  <div class="budget-bar-container">
+    <div class="budget-info">
+      <span class="budget-label">Budget mensuel</span>
+      <span class="budget-amount" id="currentSpent">0,00 €</span>
+      <span class="budget-total">/ 1 735 €</span>
     </div>
-    <div class="stat-card">
-      <div class="label">Moy. / jour</div>
-      <div class="value" id="avgDay">0 €</div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
     </div>
+    <div style="text-align:right; font-size:0.8rem; color:#94a3b8; margin-top:4px;" id="percentDisplay">0% utilisé</div>
   </div>
 
-  <div class="categories" id="categoriesContainer">
-    <h2>Répartition</h2>
-    <div id="catBars"></div>
+  <!-- Dépenses récurrentes -->
+  <div class="recurring-section">
+    <h2>📋 Dépenses récurrentes</h2>
+    <div id="recurringList"></div>
   </div>
 
+  <!-- Ajout d'une dépense libre -->
   <form id="expenseForm">
-    <h2>➕ Nouvelle dépense</h2>
+    <h2>➕ Dépense ponctuelle</h2>
     <input type="number" id="amount" placeholder="Montant (€)" step="0.01" min="0.01" required>
     <div class="form-row">
       <select id="category">
+        <option value="📦 Autres">📦 Autres</option>
         <option value="🍔 Alimentation">🍔 Alimentation</option>
         <option value="🚗 Transport">🚗 Transport</option>
         <option value="🏠 Logement">🏠 Logement</option>
         <option value="🎉 Loisirs">🎉 Loisirs</option>
         <option value="💊 Santé">💊 Santé</option>
-        <option value="📦 Autres">📦 Autres</option>
+        <option value="📱 Abonnements">📱 Abonnements</option>
+        <option value="💰 Epargne">💰 Epargne</option>
+        <option value="👨‍👩‍👧‍👦 Famille">👨‍👩‍👧‍👦 Famille</option>
       </select>
       <input type="date" id="date">
     </div>
@@ -101,9 +146,13 @@
     <button type="submit" class="btn">Ajouter</button>
   </form>
 
+  <!-- Historique -->
   <div class="expense-list" id="expenseList">
     <h2 style="font-size:1.1rem; margin-bottom:12px; color:#94a3b8;">Historique</h2>
   </div>
+
+  <!-- Bouton de remise à zéro -->
+  <button id="resetButton" class="btn reset-btn">🗑️ Remise à zéro du mois</button>
 
   <script>
     (function() {
@@ -111,99 +160,200 @@
         navigator.serviceWorker.register('sw.js');
       }
 
-      const STORAGE_KEY = 'mes_depenses_data';
-      let expenses = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      // ---- Configuration ----
+      const MONTHLY_BUDGET = 1735;
 
-      const defaultCategories = [
-        "🍔 Alimentation", "🚗 Transport", "🏠 Logement",
-        "🎉 Loisirs", "💊 Santé", "📦 Autres"
+      // Dépenses récurrentes par défaut
+      const defaultRecurring = [
+        { id: 'r1', label: 'Forfait mobile', cat: '📱 Abonnements', defaultAmount: 10.99 },
+        { id: 'r2', label: 'Apple', cat: '📱 Abonnements', defaultAmount: 2.99 },
+        { id: 'r3', label: 'Loyer voiture', cat: '🚗 Transport', defaultAmount: 148.78 },
+        { id: 'r4', label: 'Epargne Ambre', cat: '💰 Epargne', defaultAmount: 25.00 },
+        { id: 'r5', label: 'Assurance-vie', cat: '💰 Epargne', defaultAmount: 50.00 },
+        { id: 'r6', label: 'Virement compte commun', cat: '👨‍👩‍👧‍👦 Famille', defaultAmount: 1300.00 },
+        { id: 'r7', label: 'Assurance voiture', cat: '🚗 Transport', defaultAmount: 55.00 }
       ];
 
-      function save() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(expenses));
+      // Stockage local
+      const STORAGE_EXPENSES = 'mes_depenses_expenses';
+      const STORAGE_CHECKLIST = 'mes_depenses_checklist';
+
+      let expenses = JSON.parse(localStorage.getItem(STORAGE_EXPENSES)) || [];
+      let checklistState = JSON.parse(localStorage.getItem(STORAGE_CHECKLIST)) || {};
+
+      // Initialiser l'état de la checklist si vide
+      defaultRecurring.forEach(item => {
+        if (!checklistState[item.id]) {
+          checklistState[item.id] = { checked: false, amount: item.defaultAmount };
+        }
+      });
+
+      // ---- Sauvegardes ----
+      function saveExpenses() {
+        localStorage.setItem(STORAGE_EXPENSES, JSON.stringify(expenses));
+      }
+      function saveChecklist() {
+        localStorage.setItem(STORAGE_CHECKLIST, JSON.stringify(checklistState));
       }
 
-      function getCurrentMonthExpenses() {
-        const now = new Date();
-        const month = now.getMonth();
-        const year = now.getFullYear();
-        return expenses.filter(e => {
-          const d = new Date(e.date);
-          return d.getMonth() === month && d.getFullYear() === year;
-        });
+      // ---- Fonctions de mise à jour ----
+      function getTotalSpent() {
+        return expenses.reduce((sum, e) => sum + e.amount, 0);
       }
 
-      function formatEuro(amount) {
-        return Number(amount).toFixed(2) + ' €';
+      function updateBudgetBar() {
+        const total = getTotalSpent();
+        const percent = Math.min((total / MONTHLY_BUDGET) * 100, 100);
+        const fill = document.getElementById('progressFill');
+        fill.style.width = percent + '%';
+        
+        // Classes de couleur
+        fill.classList.remove('warning', 'danger');
+        if (percent >= 100) {
+          fill.classList.add('danger');
+        } else if (percent >= 80) {
+          fill.classList.add('warning');
+        }
+
+        document.getElementById('currentSpent').textContent = total.toFixed(2).replace('.', ',') + ' €';
+        document.getElementById('percentDisplay').textContent = percent.toFixed(0) + '% utilisé';
       }
 
-      function renderStats() {
-        const monthExpenses = getCurrentMonthExpenses();
-        const total = monthExpenses.reduce((sum, e) => sum + e.amount, 0);
-        document.getElementById('totalMonth').textContent = formatEuro(total);
+      // Gestion de la checkbox d'une dépense récurrente
+      function handleRecurringToggle(itemId, checked) {
+        const item = defaultRecurring.find(i => i.id === itemId);
+        if (!item) return;
+        const amount = checklistState[itemId].amount;
 
-        const now = new Date();
-        const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-        const dayOfMonth = Math.min(now.getDate(), daysInMonth);
-        const avg = dayOfMonth > 0 ? total / dayOfMonth : 0;
-        document.getElementById('avgDay').textContent = formatEuro(avg);
+        if (checked) {
+          // Ajouter la dépense
+          expenses.push({
+            amount: amount,
+            category: item.cat,
+            date: new Date().toISOString().split('T')[0],
+            note: item.label,
+            recurringId: itemId,
+            id: Date.now() + Math.random()
+          });
+        } else {
+          // Retirer la dépense correspondante
+          expenses = expenses.filter(e => e.recurringId !== itemId);
+        }
+        saveExpenses();
+        renderExpenseList();
+        updateBudgetBar();
       }
 
-      function renderCategoryBars() {
-        const monthExpenses = getCurrentMonthExpenses();
-        const total = monthExpenses.reduce((sum, e) => sum + e.amount, 0);
+      // Mise à jour du montant d'une récurrence
+      function handleAmountChange(itemId, newAmount) {
+        newAmount = parseFloat(newAmount);
+        if (isNaN(newAmount) || newAmount < 0) return;
+        checklistState[itemId].amount = newAmount;
+        saveChecklist();
 
-        const catTotals = {};
-        monthExpenses.forEach(e => {
-          catTotals[e.category] = (catTotals[e.category] || 0) + e.amount;
-        });
+        // Si coché, mettre à jour la dépense existante
+        const expense = expenses.find(e => e.recurringId === itemId);
+        if (expense) {
+          expense.amount = newAmount;
+          saveExpenses();
+          renderExpenseList();
+          updateBudgetBar();
+        }
+      }
 
-        const colors = {
-          "🍔 Alimentation": "#f59e0b",
-          "🚗 Transport": "#3b82f6",
-          "🏠 Logement": "#8b5cf6",
-          "🎉 Loisirs": "#ec4899",
-          "💊 Santé": "#10b981",
-          "📦 Autres": "#6b7280"
-        };
-
-        const container = document.getElementById('catBars');
-        container.innerHTML = defaultCategories.map(cat => {
-          const value = catTotals[cat] || 0;
-          const percent = total > 0 ? (value / total * 100) : 0;
-          return `<div class="cat-bar">
-            <span class="cat-name">${cat}</span>
-            <div class="bar-bg"><div class="bar-fill" style="width:${percent}%; background:${colors[cat]};"></div></div>
-            <span class="cat-amount">${formatEuro(value)}</span>
+      // Rendu de la checklist
+      function renderChecklist() {
+        const container = document.getElementById('recurringList');
+        container.innerHTML = defaultRecurring.map(item => {
+          const state = checklistState[item.id];
+          const checked = state ? state.checked : false;
+          const amount = state ? state.amount.toFixed(2).replace('.', ',') : item.defaultAmount.toFixed(2).replace('.', ',');
+          return `<div class="recurring-item">
+            <input type="checkbox" data-id="${item.id}" ${checked ? 'checked' : ''}>
+            <div class="recurring-label">
+              <span>${item.label} <span class="recurring-cat">${item.cat}</span></span>
+            </div>
+            <input type="number" step="0.01" min="0" class="recurring-amount-input" data-id="${item.id}" value="${amount}">
           </div>`;
         }).join('');
+
+        // Écouteurs d'événements
+        container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+          cb.addEventListener('change', (e) => {
+            const id = e.target.dataset.id;
+            checklistState[id].checked = e.target.checked;
+            saveChecklist();
+            handleRecurringToggle(id, e.target.checked);
+          });
+        });
+
+        container.querySelectorAll('.recurring-amount-input').forEach(input => {
+          input.addEventListener('change', (e) => {
+            const id = e.target.dataset.id;
+            const raw = e.target.value.replace(',', '.');
+            const val = parseFloat(raw);
+            if (!isNaN(val) && val >= 0) {
+              handleAmountChange(id, val);
+            } else {
+              // Remettre l'ancienne valeur formatée
+              e.target.value = checklistState[id].amount.toFixed(2).replace('.', ',');
+            }
+          });
+        });
       }
 
+      // Rendu de l'historique
       function renderExpenseList() {
         const list = document.getElementById('expenseList');
         const sorted = [...expenses].sort((a,b) => new Date(b.date) - new Date(a.date));
         list.innerHTML = '<h2 style="font-size:1.1rem; margin-bottom:12px; color:#94a3b8;">Historique</h2>' +
           (sorted.length === 0 ? '<p style="color:#64748b;">Aucune dépense enregistrée.</p>' :
-          sorted.map((e, idx) => {
+          sorted.map(e => {
             const originalIndex = expenses.indexOf(e);
             return `<div class="expense-item">
               <div class="expense-info">
-                <div class="expense-cat">${e.category}</div>
+                <div class="expense-cat">${e.category}${e.recurringId ? '<span class="recurring-badge">récurrent</span>' : ''}</div>
                 <div class="expense-desc">${e.note || 'Sans note'}</div>
                 <div class="expense-date">${new Date(e.date).toLocaleDateString('fr-FR')}</div>
               </div>
-              <span class="expense-amount">${formatEuro(e.amount)}</span>
+              <span class="expense-amount">${e.amount.toFixed(2).replace('.', ',')} €</span>
               <button class="delete-btn" data-index="${originalIndex}">🗑️</button>
             </div>`;
           }).join(''));
       }
 
-      function refreshUI() {
-        renderStats();
-        renderCategoryBars();
+      // Suppression d'une dépense depuis l'historique
+      function deleteExpense(index) {
+        const expense = expenses[index];
+        if (expense && expense.recurringId) {
+          // Décocher la checkbox correspondante
+          checklistState[expense.recurringId].checked = false;
+          saveChecklist();
+          renderChecklist();
+        }
+        expenses.splice(index, 1);
+        saveExpenses();
         renderExpenseList();
+        updateBudgetBar();
       }
 
+      // Remise à zéro manuelle
+      function fullReset() {
+        if (confirm('Supprimer toutes les dépenses et réinitialiser la checklist ?')) {
+          expenses = [];
+          // Réinitialiser l'état de la checklist
+          defaultRecurring.forEach(item => {
+            checklistState[item.id] = { checked: false, amount: item.defaultAmount };
+          });
+          saveExpenses();
+          saveChecklist();
+          renderChecklist();
+          renderExpenseList();
+          updateBudgetBar();
+        }
+      }
+
+      // Écouteurs globaux
       document.getElementById('expenseForm').addEventListener('submit', function(e) {
         e.preventDefault();
         const amount = parseFloat(document.getElementById('amount').value);
@@ -220,8 +370,9 @@
           note: note || null,
           id: Date.now()
         });
-        save();
-        refreshUI();
+        saveExpenses();
+        renderExpenseList();
+        updateBudgetBar();
         this.reset();
         document.getElementById('date').value = '';
       });
@@ -230,16 +381,18 @@
         if (e.target.classList.contains('delete-btn')) {
           const index = parseInt(e.target.dataset.index);
           if (!isNaN(index) && index >= 0 && index < expenses.length) {
-            expenses.splice(index, 1);
-            save();
-            refreshUI();
+            deleteExpense(index);
           }
         }
       });
 
+      document.getElementById('resetButton').addEventListener('click', fullReset);
+
       // Initialisation
       document.getElementById('date').value = new Date().toISOString().split('T')[0];
-      refreshUI();
+      renderChecklist();
+      renderExpenseList();
+      updateBudgetBar();
     })();
   </script>
 </body>
