@@ -10,131 +10,228 @@
   <title>Mes Dépenses</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    @keyframes scaleIn {
+      from { transform: scale(0.95); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: #0f172a; color: #e2e8f0; padding: 20px 16px 80px;
       max-width: 500px; margin: 0 auto;
     }
-    h1 { font-size: 1.8rem; display: flex; align-items: center; gap: 8px; margin-bottom: 24px; }
+
+    h1 {
+      font-size: 1.8rem; display: flex; align-items: center; gap: 8px;
+      margin-bottom: 8px; animation: fadeInUp 0.4s ease;
+    }
+
+    .month-badge {
+      font-size: 0.9rem; font-weight: 400; color: #94a3b8; margin-bottom: 20px;
+      animation: fadeInUp 0.4s ease 0.1s both;
+    }
 
     /* Barre de progression */
     .budget-bar-container {
-      background: #1e293b; border-radius: 16px; padding: 16px 18px; margin-bottom: 12px;
+      background: #1e293b; border-radius: 20px; padding: 18px 20px;
+      margin-bottom: 12px; animation: scaleIn 0.3s ease 0.15s both;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
     .budget-info {
-      display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;
+      display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px;
     }
-    .budget-label { font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; }
-    .budget-amount { font-size: 1.4rem; font-weight: bold; color: #f8fafc; }
+    .budget-label { font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+    .budget-amount { font-size: 1.6rem; font-weight: bold; color: #f8fafc; transition: color 0.3s; }
     .budget-total { font-size: 0.9rem; color: #64748b; }
     .progress-bar-bg {
-      height: 12px; background: #334155; border-radius: 12px; overflow: hidden; margin-top: 8px;
+      height: 14px; background: #1a2332; border-radius: 14px; overflow: hidden;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
     }
     .progress-bar-fill {
-      height: 100%; border-radius: 12px; background: #3b82f6; transition: width 0.3s, background 0.3s;
+      height: 100%; border-radius: 14px; background: #3b82f6;
+      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), background 0.5s;
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
     }
-    .progress-bar-fill.warning { background: #f59e0b; }
-    .progress-bar-fill.danger { background: #ef4444; }
+    .progress-bar-fill.warning {
+      background: #f59e0b;
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+      animation: pulse 2s infinite;
+    }
+    .progress-bar-fill.danger {
+      background: #ef4444;
+      box-shadow: 0 0 16px rgba(239, 68, 68, 0.5);
+      animation: pulse 1.5s infinite;
+    }
 
     /* Budget restant */
     .budget-remaining {
-      text-align: center; margin-bottom: 20px; font-size: 1.1rem; font-weight: 600;
+      text-align: center; margin-bottom: 24px; font-size: 1.2rem; font-weight: 700;
+      transition: all 0.3s; animation: fadeInUp 0.4s ease 0.2s both;
     }
     .budget-remaining.positive { color: #10b981; }
     .budget-remaining.negative { color: #ef4444; }
 
     /* Diagramme circulaire */
     .chart-container {
-      background: #1e293b; border-radius: 16px; padding: 20px; margin-bottom: 24px;
-      text-align: center;
+      background: #1e293b; border-radius: 20px; padding: 22px 18px;
+      margin-bottom: 24px; animation: scaleIn 0.3s ease 0.25s both;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
     .chart-container h2 {
       font-size: 1.1rem; color: #94a3b8; margin-bottom: 16px; text-align: left;
+      letter-spacing: 0.3px;
     }
     .chart-wrapper {
       display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap;
     }
-    canvas { width: 140px; height: 140px; }
+    canvas { width: 140px; height: 140px; transition: transform 0.3s; }
     .chart-legend {
-      text-align: left; font-size: 0.8rem;
+      text-align: left; font-size: 0.8rem; max-height: 200px; overflow-y: auto;
     }
     .legend-item {
-      display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+      animation: fadeInUp 0.3s ease both;
     }
     .legend-color {
-      width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
+      width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     }
-    .legend-label { color: #cbd5e1; }
-    .legend-amount { color: #94a3b8; margin-left: auto; padding-left: 8px; }
+    .legend-label { color: #e2e8f0; font-weight: 500; }
+    .legend-amount { color: #94a3b8; margin-left: auto; padding-left: 8px; font-size: 0.75rem; }
 
     /* Checklist */
     .recurring-section {
-      background: #1e293b; border-radius: 16px; padding: 18px; margin-bottom: 24px;
+      background: #1e293b; border-radius: 20px; padding: 22px 18px;
+      margin-bottom: 24px; animation: scaleIn 0.3s ease 0.3s both;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
     .recurring-section h2 {
-      font-size: 1.1rem; color: #94a3b8; margin-bottom: 14px;
+      font-size: 1.1rem; color: #94a3b8; margin-bottom: 16px; letter-spacing: 0.3px;
     }
     .recurring-item {
-      display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+      padding: 10px; border-radius: 12px; transition: background 0.2s;
     }
+    .recurring-item:hover { background: rgba(255,255,255,0.03); }
     .recurring-item input[type="checkbox"] {
-      width: 20px; height: 20px; accent-color: #3b82f6; flex-shrink: 0;
+      width: 22px; height: 22px; accent-color: #3b82f6; flex-shrink: 0; cursor: pointer;
     }
     .recurring-label {
       flex: 1; font-size: 0.95rem; color: #e2e8f0; display: flex; flex-direction: column;
     }
     .recurring-cat {
-      font-size: 0.7rem; color: #94a3b8; text-transform: uppercase;
+      font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;
     }
     .recurring-amount-input {
-      width: 80px; background: #0f172a; border: 1px solid #334155; border-radius: 8px;
-      padding: 6px 8px; color: #f1f5f9; font-size: 0.9rem; text-align: right;
+      width: 85px; background: #0f172a; border: 1px solid #334155; border-radius: 10px;
+      padding: 8px 10px; color: #f1f5f9; font-size: 0.9rem; text-align: right;
+      transition: border-color 0.2s;
+    }
+    .recurring-amount-input:focus {
+      border-color: #3b82f6; outline: none;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
     }
 
     /* Form */
     form {
-      background: #1e293b; border-radius: 20px; padding: 20px; margin-bottom: 28px;
+      background: #1e293b; border-radius: 20px; padding: 22px 18px;
+      margin-bottom: 28px; animation: scaleIn 0.3s ease 0.35s both;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
-    form h2 { margin-bottom: 16px; font-size: 1.1rem; color: #94a3b8; }
-    .form-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    form h2 { margin-bottom: 18px; font-size: 1.1rem; color: #94a3b8; letter-spacing: 0.3px; }
+    .form-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
     input, select, textarea {
       background: #0f172a; border: 1px solid #334155; border-radius: 12px;
-      padding: 12px; color: #f1f5f9; font-size: 1rem; width: 100%;
+      padding: 14px 12px; color: #f1f5f9; font-size: 1rem; width: 100%;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: #3b82f6; outline: none;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
     }
     .form-row > * { flex: 1 1 100px; }
     .btn {
-      background: #3b82f6; color: white; border: none; border-radius: 12px;
+      background: #3b82f6; color: white; border: none; border-radius: 14px;
       padding: 14px; font-size: 1rem; font-weight: 600; cursor: pointer; width: 100%;
+      transition: all 0.2s; letter-spacing: 0.3px;
     }
-    .btn:active { background: #2563eb; }
+    .btn:hover { background: #2563eb; transform: translateY(-1px); }
+    .btn:active { background: #1d4ed8; transform: translateY(0); }
     .reset-btn {
-      background: #ef4444; margin-top: 10px;
+      background: #ef4444; margin-top: 12px;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
     }
-    .reset-btn:active { background: #dc2626; }
+    .reset-btn:hover { background: #dc2626; }
+    .reset-btn:active { background: #b91c1c; }
+
+    /* Filtres */
+    .filter-bar {
+      display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .filter-btn {
+      background: #1e293b; border: 1px solid #334155; border-radius: 20px;
+      padding: 8px 14px; font-size: 0.8rem; color: #94a3b8; cursor: pointer;
+      transition: all 0.2s; white-space: nowrap;
+    }
+    .filter-btn.active {
+      background: #3b82f6; color: white; border-color: #3b82f6;
+    }
+    .filter-btn:hover:not(.active) {
+      border-color: #64748b; color: #e2e8f0;
+    }
 
     /* Liste des dépenses */
-    .expense-list { margin-top: 12px; }
+    .expense-list {
+      animation: fadeInUp 0.4s ease 0.4s both;
+    }
     .expense-item {
       display: flex; align-items: center; background: #1e293b; border-radius: 16px;
-      padding: 12px; margin-bottom: 10px;
+      padding: 14px; margin-bottom: 10px;
+      transition: all 0.2s; animation: fadeInUp 0.3s ease both;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
+    .expense-item:hover { background: #243047; transform: translateX(2px); }
     .expense-info { flex: 1; }
-    .expense-cat { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; }
-    .expense-desc { font-weight: 600; }
+    .expense-cat { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+    .expense-desc { font-weight: 600; margin: 2px 0; }
     .expense-date { font-size: 0.8rem; color: #64748b; }
-    .expense-amount { font-size: 1.2rem; font-weight: bold; margin-right: 12px; }
+    .expense-amount { font-size: 1.2rem; font-weight: bold; margin-right: 14px; }
     .delete-btn {
       background: none; border: none; color: #ef4444; font-size: 1.4rem;
-      cursor: pointer; padding: 6px;
+      cursor: pointer; padding: 6px 10px; border-radius: 8px; transition: all 0.2s;
     }
+    .delete-btn:hover { background: rgba(239,68,68,0.15); }
+    .delete-btn:active { background: rgba(239,68,68,0.3); }
     .recurring-badge {
-      background: #334155; color: #94a3b8; font-size: 0.6rem; padding: 2px 6px;
-      border-radius: 8px; margin-left: 6px; text-transform: uppercase;
+      background: #334155; color: #94a3b8; font-size: 0.65rem; padding: 2px 8px;
+      border-radius: 10px; margin-left: 8px; text-transform: uppercase; letter-spacing: 0.5px;
     }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+      background: #1e293b; color: #f1f5f9; padding: 14px 24px; border-radius: 20px;
+      font-size: 0.9rem; z-index: 1000; opacity: 0; pointer-events: none;
+      transition: opacity 0.3s; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      border: 1px solid #334155;
+    }
+    .toast.show { opacity: 1; pointer-events: auto; }
   </style>
 </head>
 <body>
   <h1>💰 Mes Dépenses</h1>
+  <div class="month-badge" id="monthBadge"></div>
 
   <!-- Barre de budget -->
   <div class="budget-bar-container">
@@ -146,7 +243,7 @@
     <div class="progress-bar-bg">
       <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
     </div>
-    <div style="text-align:right; font-size:0.8rem; color:#94a3b8; margin-top:4px;" id="percentDisplay">0% utilisé</div>
+    <div style="text-align:right; font-size:0.8rem; color:#94a3b8; margin-top:6px;" id="percentDisplay">0% utilisé</div>
   </div>
 
   <!-- Budget restant -->
@@ -192,12 +289,21 @@
   </form>
 
   <!-- Historique -->
-  <div class="expense-list" id="expenseList">
+  <div class="expense-list" id="expenseListContainer">
     <h2 style="font-size:1.1rem; margin-bottom:12px; color:#94a3b8;">Historique</h2>
+    <div class="filter-bar" id="filterBar">
+      <button class="filter-btn active" data-filter="all">Tous</button>
+      <button class="filter-btn" data-filter="recurring">Récurrents</button>
+      <button class="filter-btn" data-filter="ponctual">Ponctuels</button>
+    </div>
+    <div id="expenseList"></div>
   </div>
 
   <!-- Bouton de remise à zéro -->
   <button id="resetButton" class="btn reset-btn">🗑️ Remise à zéro du mois</button>
+
+  <!-- Toast notification -->
+  <div class="toast" id="toast"></div>
 
   <script>
     (function() {
@@ -207,29 +313,35 @@
 
       // ---- Configuration ----
       const MONTHLY_BUDGET = 1735;
+      const WARNING_THRESHOLD = 95; // Seuil d'alerte orange à 95%
 
-      // Couleurs par catégorie
+      // Couleurs par catégorie (harmonisées)
       const categoryColors = {
-        "📦 Autres": "#6b7280",
+        "📦 Autres": "#8b8fa3",
         "🍔 Alimentation": "#f59e0b",
-        "🚗 Transport": "#3b82f6",
-        "🏠 Logement": "#8b5cf6",
-        "🎉 Loisirs": "#ec4899",
-        "💊 Santé": "#10b981",
-        "📱 Abonnements": "#ef4444",
-        "💰 Epargne": "#6366f1",
-        "👨‍👩‍👧‍👦 Famille": "#14b8a6"
+        "🚗 Transport": "#60a5fa",
+        "🏠 Logement": "#a78bfa",
+        "🎉 Loisirs": "#f472b6",
+        "💊 Santé": "#34d399",
+        "📱 Abonnements": "#f87171",
+        "💰 Epargne": "#818cf8",
+        "👨‍👩‍👧‍👦 Famille": "#2dd4bf"
       };
+
+      // Filtre actif
+      let activeFilter = 'all';
 
       // Dépenses récurrentes par défaut
       const defaultRecurring = [
         { id: 'r1', label: 'Forfait mobile', cat: '📱 Abonnements', defaultAmount: 10.99 },
         { id: 'r2', label: 'Apple', cat: '📱 Abonnements', defaultAmount: 2.99 },
-        { id: 'r3', label: 'Loyer voiture', cat: '🚗 Transport', defaultAmount: 148.78 },
-        { id: 'r4', label: 'Epargne Ambre', cat: '💰 Epargne', defaultAmount: 25.00 },
-        { id: 'r5', label: 'Assurance-vie', cat: '💰 Epargne', defaultAmount: 50.00 },
-        { id: 'r6', label: 'Virement compte commun', cat: '👨‍👩‍👧‍👦 Famille', defaultAmount: 1300.00 },
-        { id: 'r7', label: 'Assurance voiture', cat: '🚗 Transport', defaultAmount: 55.00 }
+        { id: 'r3', label: 'Canal+', cat: '📱 Abonnements', defaultAmount: 13.00 },
+        { id: 'r4', label: 'Loyer voiture', cat: '🚗 Transport', defaultAmount: 148.78 },
+        { id: 'r5', label: 'Assurance voiture', cat: '🚗 Transport', defaultAmount: 55.00 },
+        { id: 'r6', label: 'Mutuelle', cat: '💊 Santé', defaultAmount: 36.52 },
+        { id: 'r7', label: 'Epargne Ambre', cat: '💰 Epargne', defaultAmount: 25.00 },
+        { id: 'r8', label: 'Assurance-vie', cat: '💰 Epargne', defaultAmount: 50.00 },
+        { id: 'r9', label: 'Virement compte commun', cat: '👨‍👩‍👧‍👦 Famille', defaultAmount: 1300.00 }
       ];
 
       // Stockage local
@@ -246,12 +358,29 @@
         }
       });
 
+      // ---- Toast ----
+      function showToast(message, duration = 2000) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.classList.add('show');
+        clearTimeout(toast._timeout);
+        toast._timeout = setTimeout(() => toast.classList.remove('show'), duration);
+      }
+
       // ---- Sauvegardes ----
       function saveExpenses() {
         localStorage.setItem(STORAGE_EXPENSES, JSON.stringify(expenses));
       }
       function saveChecklist() {
         localStorage.setItem(STORAGE_CHECKLIST, JSON.stringify(checklistState));
+      }
+
+      // ---- Mois en cours ----
+      function updateMonthBadge() {
+        const now = new Date();
+        const mois = ['Janvier','Février','Mars','Avril','Mai','Juin',
+                      'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+        document.getElementById('monthBadge').textContent = `${mois[now.getMonth()]} ${now.getFullYear()}`;
       }
 
       // ---- Fonctions de mise à jour ----
@@ -268,12 +397,12 @@
         fill.classList.remove('warning', 'danger');
         if (percent >= 100) {
           fill.classList.add('danger');
-        } else if (percent >= 80) {
+        } else if (percent >= WARNING_THRESHOLD) {
           fill.classList.add('warning');
         }
 
         document.getElementById('currentSpent').textContent = total.toFixed(2).replace('.', ',') + ' €';
-        document.getElementById('percentDisplay').textContent = percent.toFixed(0) + '% utilisé';
+        document.getElementById('percentDisplay').textContent = percent.toFixed(1) + '% utilisé';
 
         // Budget restant
         const remaining = MONTHLY_BUDGET - total;
@@ -296,7 +425,6 @@
         canvas.height = size;
         ctx.clearRect(0, 0, size, size);
 
-        // Calculer les totaux par catégorie
         const catTotals = {};
         let totalExpenses = 0;
         expenses.forEach(e => {
@@ -304,51 +432,48 @@
           totalExpenses += e.amount;
         });
 
-        // Trier par montant décroissant
         const categories = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
 
-        // Si aucune dépense, dessiner un cercle gris vide
         if (totalExpenses === 0 || categories.length === 0) {
           ctx.beginPath();
           ctx.arc(size/2, size/2, size/2 - 2, 0, Math.PI * 2);
           ctx.fillStyle = '#334155';
           ctx.fill();
-          document.getElementById('chartLegend').innerHTML = '<div style="color:#94a3b8;">Aucune dépense</div>';
+          document.getElementById('chartLegend').innerHTML = '<div style="color:#64748b;">Aucune dépense</div>';
           return;
         }
 
-        // Dessiner les parts
-        let startAngle = -Math.PI / 2; // Commencer en haut
-        categories.forEach(([cat, amount]) => {
+        let startAngle = -Math.PI / 2;
+        categories.forEach(([cat, amount], idx) => {
           const sliceAngle = (amount / totalExpenses) * Math.PI * 2;
           ctx.beginPath();
           ctx.moveTo(size/2, size/2);
           ctx.arc(size/2, size/2, size/2 - 2, startAngle, startAngle + sliceAngle);
           ctx.closePath();
-          ctx.fillStyle = categoryColors[cat] || '#6b7280';
+          ctx.fillStyle = categoryColors[cat] || '#8b8fa3';
           ctx.fill();
           startAngle += sliceAngle;
         });
 
-        // Cercle central (donut style)
+        // Cercle central (donut)
         ctx.beginPath();
         ctx.arc(size/2, size/2, size/3, 0, Math.PI * 2);
         ctx.fillStyle = '#1e293b';
         ctx.fill();
 
-        // Légende
+        // Légende avec animation stagger
         const legendContainer = document.getElementById('chartLegend');
-        legendContainer.innerHTML = categories.map(([cat, amount]) => {
+        legendContainer.innerHTML = categories.map(([cat, amount], idx) => {
           const percent = ((amount / totalExpenses) * 100).toFixed(1);
-          return `<div class="legend-item">
-            <span class="legend-color" style="background:${categoryColors[cat] || '#6b7280'}"></span>
+          return `<div class="legend-item" style="animation-delay:${idx * 0.05}s">
+            <span class="legend-color" style="background:${categoryColors[cat] || '#8b8fa3'}"></span>
             <span class="legend-label">${cat}</span>
             <span class="legend-amount">${amount.toFixed(2).replace('.', ',')} € (${percent}%)</span>
           </div>`;
         }).join('');
       }
 
-      // Gestion de la checkbox d'une dépense récurrente
+      // ---- Gestion des dépenses récurrentes ----
       function handleRecurringToggle(itemId, checked) {
         const item = defaultRecurring.find(i => i.id === itemId);
         if (!item) return;
@@ -363,8 +488,10 @@
             recurringId: itemId,
             id: Date.now() + Math.random()
           });
+          showToast('✅ ' + item.label + ' ajouté');
         } else {
           expenses = expenses.filter(e => e.recurringId !== itemId);
+          showToast('↩️ ' + item.label + ' retiré');
         }
         saveExpenses();
         renderExpenseList();
@@ -390,11 +517,11 @@
 
       function renderChecklist() {
         const container = document.getElementById('recurringList');
-        container.innerHTML = defaultRecurring.map(item => {
+        container.innerHTML = defaultRecurring.map((item, idx) => {
           const state = checklistState[item.id];
           const checked = state ? state.checked : false;
           const amount = state ? state.amount.toFixed(2).replace('.', ',') : item.defaultAmount.toFixed(2).replace('.', ',');
-          return `<div class="recurring-item">
+          return `<div class="recurring-item" style="animation: fadeInUp 0.3s ease ${idx * 0.03}s both;">
             <input type="checkbox" data-id="${item.id}" ${checked ? 'checked' : ''}>
             <div class="recurring-label">
               <span>${item.label} <span class="recurring-cat">${item.cat}</span></span>
@@ -426,28 +553,51 @@
         });
       }
 
-      function renderExpenseList() {
-        const list = document.getElementById('expenseList');
-        const sorted = [...expenses].sort((a,b) => new Date(b.date) - new Date(a.date));
-        list.innerHTML = '<h2 style="font-size:1.1rem; margin-bottom:12px; color:#94a3b8;">Historique</h2>' +
-          (sorted.length === 0 ? '<p style="color:#64748b;">Aucune dépense enregistrée.</p>' :
-          sorted.map(e => {
-            const originalIndex = expenses.indexOf(e);
-            return `<div class="expense-item">
-              <div class="expense-info">
-                <div class="expense-cat">${e.category}${e.recurringId ? '<span class="recurring-badge">récurrent</span>' : ''}</div>
-                <div class="expense-desc">${e.note || 'Sans note'}</div>
-                <div class="expense-date">${new Date(e.date).toLocaleDateString('fr-FR')}</div>
-              </div>
-              <span class="expense-amount">${e.amount.toFixed(2).replace('.', ',')} €</span>
-              <button class="delete-btn" data-index="${originalIndex}">🗑️</button>
-            </div>`;
-          }).join(''));
+      // ---- Filtres ----
+      function getFilteredExpenses() {
+        let filtered = [...expenses];
+        if (activeFilter === 'recurring') {
+          filtered = filtered.filter(e => e.recurringId);
+        } else if (activeFilter === 'ponctual') {
+          filtered = filtered.filter(e => !e.recurringId);
+        }
+        return filtered.sort((a,b) => new Date(b.date) - new Date(a.date));
       }
 
+      function renderExpenseList() {
+        const container = document.getElementById('expenseList');
+        const filtered = getFilteredExpenses();
+        
+        if (filtered.length === 0) {
+          container.innerHTML = '<p style="color:#64748b; padding:20px; text-align:center;">Aucune dépense trouvée</p>';
+          return;
+        }
+
+        container.innerHTML = filtered.map((e, idx) => {
+          const originalIndex = expenses.indexOf(e);
+          return `<div class="expense-item" style="animation-delay:${idx * 0.04}s">
+            <div class="expense-info">
+              <div class="expense-cat">${e.category}${e.recurringId ? '<span class="recurring-badge">récurrent</span>' : ''}</div>
+              <div class="expense-desc">${e.note || 'Sans note'}</div>
+              <div class="expense-date">${new Date(e.date).toLocaleDateString('fr-FR')}</div>
+            </div>
+            <span class="expense-amount">${e.amount.toFixed(2).replace('.', ',')} €</span>
+            <button class="delete-btn" data-index="${originalIndex}" title="Supprimer">🗑️</button>
+          </div>`;
+        }).join('');
+      }
+
+      // ---- Suppression avec confirmation ----
       function deleteExpense(index) {
         const expense = expenses[index];
-        if (expense && expense.recurringId) {
+        if (!expense) return;
+        
+        const label = expense.note || expense.category;
+        if (!confirm(`Supprimer cette dépense ?\n\n"${label}"\n${expense.amount.toFixed(2).replace('.', ',')} €`)) {
+          return;
+        }
+
+        if (expense.recurringId) {
           checklistState[expense.recurringId].checked = false;
           saveChecklist();
           renderChecklist();
@@ -457,24 +607,28 @@
         renderExpenseList();
         updateBudgetBar();
         drawPieChart();
+        showToast('🗑️ Dépense supprimée');
       }
 
+      // ---- Remise à zéro ----
       function fullReset() {
-        if (confirm('Supprimer toutes les dépenses et réinitialiser la checklist ?')) {
-          expenses = [];
-          defaultRecurring.forEach(item => {
-            checklistState[item.id] = { checked: false, amount: item.defaultAmount };
-          });
-          saveExpenses();
-          saveChecklist();
-          renderChecklist();
-          renderExpenseList();
-          updateBudgetBar();
-          drawPieChart();
-        }
+        if (!confirm('⚠️ Supprimer TOUTES les dépenses et réinitialiser la checklist ?')) return;
+        if (!confirm('Confirmation finale : cette action est irréversible. Continuer ?')) return;
+
+        expenses = [];
+        defaultRecurring.forEach(item => {
+          checklistState[item.id] = { checked: false, amount: item.defaultAmount };
+        });
+        saveExpenses();
+        saveChecklist();
+        renderChecklist();
+        renderExpenseList();
+        updateBudgetBar();
+        drawPieChart();
+        showToast('🔄 Compteurs remis à zéro');
       }
 
-      // Écouteurs globaux
+      // ---- Écouteurs ----
       document.getElementById('expenseForm').addEventListener('submit', function(e) {
         e.preventDefault();
         const amount = parseFloat(document.getElementById('amount').value);
@@ -482,7 +636,10 @@
         const date = document.getElementById('date').value || new Date().toISOString().split('T')[0];
         const note = document.getElementById('note').value.trim();
 
-        if (isNaN(amount) || amount <= 0) return;
+        if (isNaN(amount) || amount <= 0) {
+          showToast('⚠️ Veuillez entrer un montant valide');
+          return;
+        }
 
         expenses.push({
           amount,
@@ -495,6 +652,7 @@
         renderExpenseList();
         updateBudgetBar();
         drawPieChart();
+        showToast('✅ Dépense ajoutée : ' + amount.toFixed(2).replace('.', ',') + ' €');
         this.reset();
         document.getElementById('date').value = '';
       });
@@ -508,10 +666,21 @@
         }
       });
 
+      // Filtres
+      document.getElementById('filterBar').addEventListener('click', function(e) {
+        if (e.target.classList.contains('filter-btn')) {
+          document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+          e.target.classList.add('active');
+          activeFilter = e.target.dataset.filter;
+          renderExpenseList();
+        }
+      });
+
       document.getElementById('resetButton').addEventListener('click', fullReset);
 
-      // Initialisation
+      // ---- Initialisation ----
       document.getElementById('date').value = new Date().toISOString().split('T')[0];
+      updateMonthBadge();
       renderChecklist();
       renderExpenseList();
       updateBudgetBar();
