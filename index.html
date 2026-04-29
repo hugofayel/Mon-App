@@ -19,7 +19,7 @@
 
     /* Barre de progression */
     .budget-bar-container {
-      background: #1e293b; border-radius: 16px; padding: 16px 18px; margin-bottom: 28px;
+      background: #1e293b; border-radius: 16px; padding: 16px 18px; margin-bottom: 12px;
     }
     .budget-info {
       display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;
@@ -35,6 +35,37 @@
     }
     .progress-bar-fill.warning { background: #f59e0b; }
     .progress-bar-fill.danger { background: #ef4444; }
+
+    /* Budget restant */
+    .budget-remaining {
+      text-align: center; margin-bottom: 20px; font-size: 1.1rem; font-weight: 600;
+    }
+    .budget-remaining.positive { color: #10b981; }
+    .budget-remaining.negative { color: #ef4444; }
+
+    /* Diagramme circulaire */
+    .chart-container {
+      background: #1e293b; border-radius: 16px; padding: 20px; margin-bottom: 24px;
+      text-align: center;
+    }
+    .chart-container h2 {
+      font-size: 1.1rem; color: #94a3b8; margin-bottom: 16px; text-align: left;
+    }
+    .chart-wrapper {
+      display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap;
+    }
+    canvas { width: 140px; height: 140px; }
+    .chart-legend {
+      text-align: left; font-size: 0.8rem;
+    }
+    .legend-item {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+    }
+    .legend-color {
+      width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
+    }
+    .legend-label { color: #cbd5e1; }
+    .legend-amount { color: #94a3b8; margin-left: auto; padding-left: 8px; }
 
     /* Checklist */
     .recurring-section {
@@ -118,6 +149,20 @@
     <div style="text-align:right; font-size:0.8rem; color:#94a3b8; margin-top:4px;" id="percentDisplay">0% utilisé</div>
   </div>
 
+  <!-- Budget restant -->
+  <div class="budget-remaining positive" id="budgetRemaining">
+    Reste : 1 735,00 €
+  </div>
+
+  <!-- Diagramme circulaire -->
+  <div class="chart-container">
+    <h2>📊 Répartition par catégorie</h2>
+    <div class="chart-wrapper">
+      <canvas id="pieChart" width="140" height="140"></canvas>
+      <div class="chart-legend" id="chartLegend"></div>
+    </div>
+  </div>
+
   <!-- Dépenses récurrentes -->
   <div class="recurring-section">
     <h2>📋 Dépenses récurrentes</h2>
@@ -163,6 +208,19 @@
       // ---- Configuration ----
       const MONTHLY_BUDGET = 1735;
 
+      // Couleurs par catégorie
+      const categoryColors = {
+        "📦 Autres": "#6b7280",
+        "🍔 Alimentation": "#f59e0b",
+        "🚗 Transport": "#3b82f6",
+        "🏠 Logement": "#8b5cf6",
+        "🎉 Loisirs": "#ec4899",
+        "💊 Santé": "#10b981",
+        "📱 Abonnements": "#ef4444",
+        "💰 Epargne": "#6366f1",
+        "👨‍👩‍👧‍👦 Famille": "#14b8a6"
+      };
+
       // Dépenses récurrentes par défaut
       const defaultRecurring = [
         { id: 'r1', label: 'Forfait mobile', cat: '📱 Abonnements', defaultAmount: 10.99 },
@@ -207,7 +265,6 @@
         const fill = document.getElementById('progressFill');
         fill.style.width = percent + '%';
         
-        // Classes de couleur
         fill.classList.remove('warning', 'danger');
         if (percent >= 100) {
           fill.classList.add('danger');
@@ -217,6 +274,78 @@
 
         document.getElementById('currentSpent').textContent = total.toFixed(2).replace('.', ',') + ' €';
         document.getElementById('percentDisplay').textContent = percent.toFixed(0) + '% utilisé';
+
+        // Budget restant
+        const remaining = MONTHLY_BUDGET - total;
+        const remainingEl = document.getElementById('budgetRemaining');
+        if (remaining >= 0) {
+          remainingEl.textContent = 'Reste : ' + remaining.toFixed(2).replace('.', ',') + ' €';
+          remainingEl.className = 'budget-remaining positive';
+        } else {
+          remainingEl.textContent = 'Dépassement de : ' + Math.abs(remaining).toFixed(2).replace('.', ',') + ' €';
+          remainingEl.className = 'budget-remaining negative';
+        }
+      }
+
+      // ---- Diagramme circulaire ----
+      function drawPieChart() {
+        const canvas = document.getElementById('pieChart');
+        const ctx = canvas.getContext('2d');
+        const size = 140;
+        canvas.width = size;
+        canvas.height = size;
+        ctx.clearRect(0, 0, size, size);
+
+        // Calculer les totaux par catégorie
+        const catTotals = {};
+        let totalExpenses = 0;
+        expenses.forEach(e => {
+          catTotals[e.category] = (catTotals[e.category] || 0) + e.amount;
+          totalExpenses += e.amount;
+        });
+
+        // Trier par montant décroissant
+        const categories = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
+
+        // Si aucune dépense, dessiner un cercle gris vide
+        if (totalExpenses === 0 || categories.length === 0) {
+          ctx.beginPath();
+          ctx.arc(size/2, size/2, size/2 - 2, 0, Math.PI * 2);
+          ctx.fillStyle = '#334155';
+          ctx.fill();
+          document.getElementById('chartLegend').innerHTML = '<div style="color:#94a3b8;">Aucune dépense</div>';
+          return;
+        }
+
+        // Dessiner les parts
+        let startAngle = -Math.PI / 2; // Commencer en haut
+        categories.forEach(([cat, amount]) => {
+          const sliceAngle = (amount / totalExpenses) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.moveTo(size/2, size/2);
+          ctx.arc(size/2, size/2, size/2 - 2, startAngle, startAngle + sliceAngle);
+          ctx.closePath();
+          ctx.fillStyle = categoryColors[cat] || '#6b7280';
+          ctx.fill();
+          startAngle += sliceAngle;
+        });
+
+        // Cercle central (donut style)
+        ctx.beginPath();
+        ctx.arc(size/2, size/2, size/3, 0, Math.PI * 2);
+        ctx.fillStyle = '#1e293b';
+        ctx.fill();
+
+        // Légende
+        const legendContainer = document.getElementById('chartLegend');
+        legendContainer.innerHTML = categories.map(([cat, amount]) => {
+          const percent = ((amount / totalExpenses) * 100).toFixed(1);
+          return `<div class="legend-item">
+            <span class="legend-color" style="background:${categoryColors[cat] || '#6b7280'}"></span>
+            <span class="legend-label">${cat}</span>
+            <span class="legend-amount">${amount.toFixed(2).replace('.', ',')} € (${percent}%)</span>
+          </div>`;
+        }).join('');
       }
 
       // Gestion de la checkbox d'une dépense récurrente
@@ -226,7 +355,6 @@
         const amount = checklistState[itemId].amount;
 
         if (checked) {
-          // Ajouter la dépense
           expenses.push({
             amount: amount,
             category: item.cat,
@@ -236,32 +364,30 @@
             id: Date.now() + Math.random()
           });
         } else {
-          // Retirer la dépense correspondante
           expenses = expenses.filter(e => e.recurringId !== itemId);
         }
         saveExpenses();
         renderExpenseList();
         updateBudgetBar();
+        drawPieChart();
       }
 
-      // Mise à jour du montant d'une récurrence
       function handleAmountChange(itemId, newAmount) {
         newAmount = parseFloat(newAmount);
         if (isNaN(newAmount) || newAmount < 0) return;
         checklistState[itemId].amount = newAmount;
         saveChecklist();
 
-        // Si coché, mettre à jour la dépense existante
         const expense = expenses.find(e => e.recurringId === itemId);
         if (expense) {
           expense.amount = newAmount;
           saveExpenses();
           renderExpenseList();
           updateBudgetBar();
+          drawPieChart();
         }
       }
 
-      // Rendu de la checklist
       function renderChecklist() {
         const container = document.getElementById('recurringList');
         container.innerHTML = defaultRecurring.map(item => {
@@ -277,7 +403,6 @@
           </div>`;
         }).join('');
 
-        // Écouteurs d'événements
         container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
           cb.addEventListener('change', (e) => {
             const id = e.target.dataset.id;
@@ -295,14 +420,12 @@
             if (!isNaN(val) && val >= 0) {
               handleAmountChange(id, val);
             } else {
-              // Remettre l'ancienne valeur formatée
               e.target.value = checklistState[id].amount.toFixed(2).replace('.', ',');
             }
           });
         });
       }
 
-      // Rendu de l'historique
       function renderExpenseList() {
         const list = document.getElementById('expenseList');
         const sorted = [...expenses].sort((a,b) => new Date(b.date) - new Date(a.date));
@@ -322,11 +445,9 @@
           }).join(''));
       }
 
-      // Suppression d'une dépense depuis l'historique
       function deleteExpense(index) {
         const expense = expenses[index];
         if (expense && expense.recurringId) {
-          // Décocher la checkbox correspondante
           checklistState[expense.recurringId].checked = false;
           saveChecklist();
           renderChecklist();
@@ -335,13 +456,12 @@
         saveExpenses();
         renderExpenseList();
         updateBudgetBar();
+        drawPieChart();
       }
 
-      // Remise à zéro manuelle
       function fullReset() {
         if (confirm('Supprimer toutes les dépenses et réinitialiser la checklist ?')) {
           expenses = [];
-          // Réinitialiser l'état de la checklist
           defaultRecurring.forEach(item => {
             checklistState[item.id] = { checked: false, amount: item.defaultAmount };
           });
@@ -350,6 +470,7 @@
           renderChecklist();
           renderExpenseList();
           updateBudgetBar();
+          drawPieChart();
         }
       }
 
@@ -373,6 +494,7 @@
         saveExpenses();
         renderExpenseList();
         updateBudgetBar();
+        drawPieChart();
         this.reset();
         document.getElementById('date').value = '';
       });
@@ -393,6 +515,7 @@
       renderChecklist();
       renderExpenseList();
       updateBudgetBar();
+      drawPieChart();
     })();
   </script>
 </body>
