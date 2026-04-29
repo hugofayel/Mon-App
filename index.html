@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="manifest.json">
+  <title>Mes Dépenses</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f172a; color: #e2e8f0; padding: 20px 16px 80px;
+      max-width: 500px; margin: 0 auto;
+    }
+    h1 { font-size: 1.8rem; display: flex; align-items: center; gap: 8px; margin-bottom: 24px; }
+    .stats {
+      display: flex; gap: 12px; margin-bottom: 28px;
+    }
+    .stat-card {
+      flex: 1; background: #1e293b; border-radius: 16px; padding: 16px;
+      text-align: center;
+    }
+    .stat-card .label { font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; }
+    .stat-card .value { font-size: 1.8rem; font-weight: bold; margin-top: 4px; color: #f8fafc; }
+    .categories { margin-bottom: 28px; }
+    .categories h2 { font-size: 1.1rem; margin-bottom: 12px; color: #94a3b8; }
+    .cat-bar { display: flex; align-items: center; margin-bottom: 12px; }
+    .cat-name { width: 90px; font-size: 0.85rem; color: #cbd5e1; }
+    .bar-bg { flex: 1; height: 22px; background: #334155; border-radius: 12px; overflow: hidden; margin: 0 8px; }
+    .bar-fill { height: 100%; border-radius: 12px; transition: width 0.3s; }
+    .cat-amount { width: 70px; font-size: 0.85rem; text-align: right; color: #f1f5f9; }
+    form {
+      background: #1e293b; border-radius: 20px; padding: 20px;
+      margin-bottom: 28px;
+    }
+    form h2 { margin-bottom: 16px; font-size: 1.1rem; color: #94a3b8; }
+    .form-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    input, select, textarea {
+      background: #0f172a; border: 1px solid #334155; border-radius: 12px;
+      padding: 12px; color: #f1f5f9; font-size: 1rem; width: 100%;
+    }
+    .form-row > * { flex: 1 1 100px; }
+    .btn {
+      background: #3b82f6; color: white; border: none; border-radius: 12px;
+      padding: 14px; font-size: 1rem; font-weight: 600; cursor: pointer; width: 100%;
+    }
+    .btn:active { background: #2563eb; }
+    .expense-list { margin-top: 12px; }
+    .expense-item {
+      display: flex; align-items: center; background: #1e293b; border-radius: 16px;
+      padding: 12px; margin-bottom: 10px;
+    }
+    .expense-info { flex: 1; }
+    .expense-cat { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; }
+    .expense-desc { font-weight: 600; }
+    .expense-date { font-size: 0.8rem; color: #64748b; }
+    .expense-amount { font-size: 1.2rem; font-weight: bold; margin-right: 12px; }
+    .delete-btn {
+      background: none; border: none; color: #ef4444; font-size: 1.4rem;
+      cursor: pointer; padding: 6px;
+    }
+  </style>
+</head>
+<body>
+  <h1>💰 Mes Dépenses</h1>
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="label">Ce mois</div>
+      <div class="value" id="totalMonth">0 €</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Moy. / jour</div>
+      <div class="value" id="avgDay">0 €</div>
+    </div>
+  </div>
+
+  <div class="categories" id="categoriesContainer">
+    <h2>Répartition</h2>
+    <div id="catBars"></div>
+  </div>
+
+  <form id="expenseForm">
+    <h2>➕ Nouvelle dépense</h2>
+    <input type="number" id="amount" placeholder="Montant (€)" step="0.01" min="0.01" required>
+    <div class="form-row">
+      <select id="category">
+        <option value="🍔 Alimentation">🍔 Alimentation</option>
+        <option value="🚗 Transport">🚗 Transport</option>
+        <option value="🏠 Logement">🏠 Logement</option>
+        <option value="🎉 Loisirs">🎉 Loisirs</option>
+        <option value="💊 Santé">💊 Santé</option>
+        <option value="📦 Autres">📦 Autres</option>
+      </select>
+      <input type="date" id="date">
+    </div>
+    <input type="text" id="note" placeholder="Note (optionnelle)">
+    <button type="submit" class="btn">Ajouter</button>
+  </form>
+
+  <div class="expense-list" id="expenseList">
+    <h2 style="font-size:1.1rem; margin-bottom:12px; color:#94a3b8;">Historique</h2>
+  </div>
+
+  <script>
+    (function() {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+      }
+
+      const STORAGE_KEY = 'mes_depenses_data';
+      let expenses = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+
+      const defaultCategories = [
+        "🍔 Alimentation", "🚗 Transport", "🏠 Logement",
+        "🎉 Loisirs", "💊 Santé", "📦 Autres"
+      ];
+
+      function save() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(expenses));
+      }
+
+      function getCurrentMonthExpenses() {
+        const now = new Date();
+        const month = now.getMonth();
+        const year = now.getFullYear();
+        return expenses.filter(e => {
+          const d = new Date(e.date);
+          return d.getMonth() === month && d.getFullYear() === year;
+        });
+      }
+
+      function formatEuro(amount) {
+        return Number(amount).toFixed(2) + ' €';
+      }
+
+      function renderStats() {
+        const monthExpenses = getCurrentMonthExpenses();
+        const total = monthExpenses.reduce((sum, e) => sum + e.amount, 0);
+        document.getElementById('totalMonth').textContent = formatEuro(total);
+
+        const now = new Date();
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+        const dayOfMonth = Math.min(now.getDate(), daysInMonth);
+        const avg = dayOfMonth > 0 ? total / dayOfMonth : 0;
+        document.getElementById('avgDay').textContent = formatEuro(avg);
+      }
+
+      function renderCategoryBars() {
+        const monthExpenses = getCurrentMonthExpenses();
+        const total = monthExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+        const catTotals = {};
+        monthExpenses.forEach(e => {
+          catTotals[e.category] = (catTotals[e.category] || 0) + e.amount;
+        });
+
+        const colors = {
+          "🍔 Alimentation": "#f59e0b",
+          "🚗 Transport": "#3b82f6",
+          "🏠 Logement": "#8b5cf6",
+          "🎉 Loisirs": "#ec4899",
+          "💊 Santé": "#10b981",
+          "📦 Autres": "#6b7280"
+        };
+
+        const container = document.getElementById('catBars');
+        container.innerHTML = defaultCategories.map(cat => {
+          const value = catTotals[cat] || 0;
+          const percent = total > 0 ? (value / total * 100) : 0;
+          return `<div class="cat-bar">
+            <span class="cat-name">${cat}</span>
+            <div class="bar-bg"><div class="bar-fill" style="width:${percent}%; background:${colors[cat]};"></div></div>
+            <span class="cat-amount">${formatEuro(value)}</span>
+          </div>`;
+        }).join('');
+      }
+
+      function renderExpenseList() {
+        const list = document.getElementById('expenseList');
+        const sorted = [...expenses].sort((a,b) => new Date(b.date) - new Date(a.date));
+        list.innerHTML = '<h2 style="font-size:1.1rem; margin-bottom:12px; color:#94a3b8;">Historique</h2>' +
+          (sorted.length === 0 ? '<p style="color:#64748b;">Aucune dépense enregistrée.</p>' :
+          sorted.map((e, idx) => {
+            const originalIndex = expenses.indexOf(e);
+            return `<div class="expense-item">
+              <div class="expense-info">
+                <div class="expense-cat">${e.category}</div>
+                <div class="expense-desc">${e.note || 'Sans note'}</div>
+                <div class="expense-date">${new Date(e.date).toLocaleDateString('fr-FR')}</div>
+              </div>
+              <span class="expense-amount">${formatEuro(e.amount)}</span>
+              <button class="delete-btn" data-index="${originalIndex}">🗑️</button>
+            </div>`;
+          }).join(''));
+      }
+
+      function refreshUI() {
+        renderStats();
+        renderCategoryBars();
+        renderExpenseList();
+      }
+
+      document.getElementById('expenseForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const amount = parseFloat(document.getElementById('amount').value);
+        const category = document.getElementById('category').value;
+        const date = document.getElementById('date').value || new Date().toISOString().split('T')[0];
+        const note = document.getElementById('note').value.trim();
+
+        if (isNaN(amount) || amount <= 0) return;
+
+        expenses.push({
+          amount,
+          category,
+          date,
+          note: note || null,
+          id: Date.now()
+        });
+        save();
+        refreshUI();
+        this.reset();
+        document.getElementById('date').value = '';
+      });
+
+      document.getElementById('expenseList').addEventListener('click', function(e) {
+        if (e.target.classList.contains('delete-btn')) {
+          const index = parseInt(e.target.dataset.index);
+          if (!isNaN(index) && index >= 0 && index < expenses.length) {
+            expenses.splice(index, 1);
+            save();
+            refreshUI();
+          }
+        }
+      });
+
+      // Initialisation
+      document.getElementById('date').value = new Date().toISOString().split('T')[0];
+      refreshUI();
+    })();
+  </script>
+</body>
+</html>
