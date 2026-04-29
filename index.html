@@ -48,10 +48,34 @@
       margin-bottom: 12px; animation: scaleIn 0.3s ease 0.15s both;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
+    .budget-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+    }
+    .budget-label { font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+    .budget-edit-btn {
+      background: none; border: 1px solid #334155; color: #94a3b8; padding: 4px 10px;
+      border-radius: 12px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;
+    }
+    .budget-edit-btn:hover { background: #334155; color: #e2e8f0; }
+    .budget-edit-row {
+      display: none; gap: 8px; margin-bottom: 10px; align-items: center;
+    }
+    .budget-edit-row.active { display: flex; }
+    .budget-edit-input {
+      flex: 1; background: #0f172a; border: 1px solid #3b82f6; border-radius: 10px;
+      padding: 8px 12px; color: #f1f5f9; font-size: 0.95rem;
+    }
+    .budget-edit-save {
+      background: #3b82f6; color: white; border: none; border-radius: 10px;
+      padding: 8px 14px; font-size: 0.85rem; cursor: pointer; font-weight: 600;
+    }
+    .budget-edit-cancel {
+      background: none; border: 1px solid #334155; color: #94a3b8; border-radius: 10px;
+      padding: 8px 12px; font-size: 0.85rem; cursor: pointer;
+    }
     .budget-info {
       display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px;
     }
-    .budget-label { font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
     .budget-amount { font-size: 1.6rem; font-weight: bold; color: #f8fafc; transition: color 0.3s; }
     .budget-total { font-size: 0.9rem; color: #64748b; }
     .progress-bar-bg {
@@ -129,6 +153,12 @@
     }
     .recurring-label {
       flex: 1; font-size: 0.95rem; color: #e2e8f0; display: flex; flex-direction: column;
+    }
+    .recurring-label-top {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .recurring-amount-display {
+      font-size: 0.9rem; font-weight: 600; color: #cbd5e1; margin-left: auto;
     }
     .recurring-cat {
       font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;
@@ -235,10 +265,18 @@
 
   <!-- Barre de budget -->
   <div class="budget-bar-container">
-    <div class="budget-info">
+    <div class="budget-header">
       <span class="budget-label">Budget mensuel</span>
+      <button class="budget-edit-btn" id="budgetEditBtn">✏️ Modifier</button>
+    </div>
+    <div class="budget-edit-row" id="budgetEditRow">
+      <input type="number" class="budget-edit-input" id="budgetEditInput" placeholder="Nouveau budget (€)" step="1" min="1">
+      <button class="budget-edit-save" id="budgetEditSave">OK</button>
+      <button class="budget-edit-cancel" id="budgetEditCancel">Annuler</button>
+    </div>
+    <div class="budget-info">
       <span class="budget-amount" id="currentSpent">0,00 €</span>
-      <span class="budget-total">/ 1 735 €</span>
+      <span class="budget-total" id="budgetTotalDisplay">/ 1 735 €</span>
     </div>
     <div class="progress-bar-bg">
       <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
@@ -312,8 +350,14 @@
       }
 
       // ---- Configuration ----
-      const MONTHLY_BUDGET = 1735;
+      const DEFAULT_BUDGET = 1735;
+      const STORAGE_BUDGET = 'mes_depenses_budget';
+      let monthlyBudget = parseFloat(localStorage.getItem(STORAGE_BUDGET)) || DEFAULT_BUDGET;
       const WARNING_THRESHOLD = 95; // Seuil d'alerte orange à 95%
+
+      function saveBudget() {
+        localStorage.setItem(STORAGE_BUDGET, monthlyBudget);
+      }
 
       // Couleurs par catégorie (harmonisées)
       const categoryColors = {
@@ -388,9 +432,13 @@
         return expenses.reduce((sum, e) => sum + e.amount, 0);
       }
 
+      function updateBudgetDisplay() {
+        document.getElementById('budgetTotalDisplay').textContent = '/ ' + monthlyBudget.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' €';
+      }
+
       function updateBudgetBar() {
         const total = getTotalSpent();
-        const percent = Math.min((total / MONTHLY_BUDGET) * 100, 100);
+        const percent = Math.min((total / monthlyBudget) * 100, 100);
         const fill = document.getElementById('progressFill');
         fill.style.width = percent + '%';
         
@@ -403,9 +451,10 @@
 
         document.getElementById('currentSpent').textContent = total.toFixed(2).replace('.', ',') + ' €';
         document.getElementById('percentDisplay').textContent = percent.toFixed(1) + '% utilisé';
+        updateBudgetDisplay();
 
         // Budget restant
-        const remaining = MONTHLY_BUDGET - total;
+        const remaining = monthlyBudget - total;
         const remainingEl = document.getElementById('budgetRemaining');
         if (remaining >= 0) {
           remainingEl.textContent = 'Reste : ' + remaining.toFixed(2).replace('.', ',') + ' €';
@@ -444,7 +493,7 @@
         }
 
         let startAngle = -Math.PI / 2;
-        categories.forEach(([cat, amount], idx) => {
+        categories.forEach(([cat, amount]) => {
           const sliceAngle = (amount / totalExpenses) * Math.PI * 2;
           ctx.beginPath();
           ctx.moveTo(size/2, size/2);
@@ -461,7 +510,7 @@
         ctx.fillStyle = '#1e293b';
         ctx.fill();
 
-        // Légende avec animation stagger
+        // Légende avec animation
         const legendContainer = document.getElementById('chartLegend');
         legendContainer.innerHTML = categories.map(([cat, amount], idx) => {
           const percent = ((amount / totalExpenses) * 100).toFixed(1);
@@ -513,6 +562,7 @@
           updateBudgetBar();
           drawPieChart();
         }
+        renderChecklist(); // Mettre à jour l'affichage du montant
       }
 
       function renderChecklist() {
@@ -520,13 +570,17 @@
         container.innerHTML = defaultRecurring.map((item, idx) => {
           const state = checklistState[item.id];
           const checked = state ? state.checked : false;
-          const amount = state ? state.amount.toFixed(2).replace('.', ',') : item.defaultAmount.toFixed(2).replace('.', ',');
+          const amount = state ? state.amount : item.defaultAmount;
+          const amountFormatted = amount.toFixed(2).replace('.', ',');
           return `<div class="recurring-item" style="animation: fadeInUp 0.3s ease ${idx * 0.03}s both;">
             <input type="checkbox" data-id="${item.id}" ${checked ? 'checked' : ''}>
             <div class="recurring-label">
-              <span>${item.label} <span class="recurring-cat">${item.cat}</span></span>
+              <div class="recurring-label-top">
+                <span>${item.label} <span class="recurring-cat">${item.cat}</span></span>
+                <span class="recurring-amount-display">${amountFormatted} €</span>
+              </div>
             </div>
-            <input type="number" step="0.01" min="0" class="recurring-amount-input" data-id="${item.id}" value="${amount}">
+            <input type="number" step="0.01" min="0" class="recurring-amount-input" data-id="${item.id}" value="${amountFormatted}">
           </div>`;
         }).join('');
 
@@ -677,6 +731,29 @@
       });
 
       document.getElementById('resetButton').addEventListener('click', fullReset);
+
+      // ---- Édition du budget ----
+      document.getElementById('budgetEditBtn').addEventListener('click', function() {
+        document.getElementById('budgetEditRow').classList.add('active');
+        document.getElementById('budgetEditInput').value = monthlyBudget;
+        document.getElementById('budgetEditInput').focus();
+      });
+
+      document.getElementById('budgetEditCancel').addEventListener('click', function() {
+        document.getElementById('budgetEditRow').classList.remove('active');
+      });
+
+      document.getElementById('budgetEditSave').addEventListener('click', function() {
+        const newBudget = parseFloat(document.getElementById('budgetEditInput').value);
+        if (!isNaN(newBudget) && newBudget > 0) {
+          monthlyBudget = newBudget;
+          saveBudget();
+          updateBudgetBar();
+          drawPieChart();
+          document.getElementById('budgetEditRow').classList.remove('active');
+          showToast('💰 Budget mis à jour : ' + newBudget.toFixed(0) + ' €');
+        }
+      });
 
       // ---- Initialisation ----
       document.getElementById('date').value = new Date().toISOString().split('T')[0];
