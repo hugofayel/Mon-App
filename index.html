@@ -611,6 +611,12 @@
     }
     .btn-danger:active { background: rgba(244,63,94,0.2); }
 
+    /* Bouton clôture direct */
+    .close-month-direct {
+      margin-top: 4px;
+      margin-bottom: 8px;
+    }
+
     /* ==================== SHEETS ==================== */
     .sheet-backdrop {
       position: fixed;
@@ -793,7 +799,6 @@
       gap: 8px;
     }
 
-    /* Stats grid */
     .stats-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -831,7 +836,6 @@
       margin-top: 3px;
     }
 
-    /* Donut */
     .donut-wrapper {
       display: flex;
       align-items: center;
@@ -875,7 +879,6 @@
       white-space: nowrap;
     }
 
-    /* Evolution chart */
     #evolutionChart {
       width: 100%;
       height: 180px;
@@ -922,7 +925,6 @@
       border-right: none;
     }
 
-    /* Comparaison budget vs réel */
     .compare-item { margin-bottom: 16px; }
     .compare-item:last-child { margin-bottom: 0; }
     .compare-header {
@@ -998,38 +1000,6 @@
       <button id="bannerCloseBtn">Clôturer</button>
     </div>
 
-    <!-- VERSEMENTS -->
-    <section class="card" data-section="contributions">
-      <header class="card-header" data-toggle="contributions">
-        <h2>💵 Versements <span class="badge hidden" id="contributionsBadge">0</span></h2>
-        <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-      </header>
-      <div class="card-body">
-        <div class="card-body-inner">
-          <div class="contribution-base">
-            <label class="field">
-              <span class="field-label">Chacun verse</span>
-              <input type="text" inputmode="decimal" id="contributionInput" placeholder="0,00">
-            </label>
-            <div class="base-display">
-              <span class="field-label">Base × 2</span>
-              <div class="base-value" id="baseValue">0 €</div>
-            </div>
-          </div>
-
-          <div class="section-divider">Versements ponctuels</div>
-
-          <div id="contributionsList"></div>
-          <button class="add-btn" data-open-sheet="sheetContribution">+ Ajouter un versement ponctuel</button>
-
-          <div class="contributions-total">
-            <span>Budget du couple</span>
-            <span id="contributionsTotal">0 €</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <!-- RÉCURRENTES -->
     <section class="card" data-section="recurring">
       <header class="card-header" data-toggle="recurring">
@@ -1062,6 +1032,38 @@
       </div>
     </section>
 
+    <!-- VERSEMENTS -->
+    <section class="card" data-section="contributions">
+      <header class="card-header" data-toggle="contributions">
+        <h2>💵 Versements <span class="badge hidden" id="contributionsBadge">0</span></h2>
+        <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </header>
+      <div class="card-body">
+        <div class="card-body-inner">
+          <div class="contribution-base">
+            <label class="field">
+              <span class="field-label">Chacun verse</span>
+              <input type="text" inputmode="decimal" id="contributionInput" placeholder="0,00">
+            </label>
+            <div class="base-display">
+              <span class="field-label">Base × 2</span>
+              <div class="base-value" id="baseValue">0 €</div>
+            </div>
+          </div>
+
+          <div class="section-divider">Versements ponctuels</div>
+
+          <div id="contributionsList"></div>
+          <button class="add-btn" data-open-sheet="sheetContribution">+ Ajouter un versement ponctuel</button>
+
+          <div class="contributions-total">
+            <span>Budget du couple</span>
+            <span id="contributionsTotal">0 €</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- CATÉGORIES -->
     <section class="card collapsed" data-section="categories">
       <header class="card-header" data-toggle="categories">
@@ -1080,28 +1082,16 @@
       </div>
     </section>
 
-    <!-- RÉGLAGES -->
-    <section class="card collapsed" data-section="settings">
-      <header class="card-header" data-toggle="settings">
-        <h2>⚙️ Réglages</h2>
-        <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-      </header>
-      <div class="card-body">
-        <div class="card-body-inner">
-          <button class="btn btn-danger" id="closeMonthBtn">🔄 Clôturer le mois</button>
-        </div>
-      </div>
-    </section>
+    <!-- BOUTON CLÔTURE DIRECT -->
+    <button class="btn btn-danger close-month-direct" id="closeMonthBtn">🔄 Clôturer le mois</button>
 
   </main>
 
   <!-- ==================== VUE ANALYSE ==================== -->
   <main class="app-main view hidden" id="viewAnalysis">
 
-    <!-- Stats -->
     <div class="stats-grid" id="statsGrid"></div>
 
-    <!-- Donut -->
     <section class="card">
       <div class="card-padded">
         <h2 class="analysis-title">📊 Répartition par catégorie</h2>
@@ -1112,7 +1102,6 @@
       </div>
     </section>
 
-    <!-- Évolution -->
     <section class="card">
       <div class="card-padded">
         <h2 class="analysis-title">📈 Évolution du mois</h2>
@@ -1125,7 +1114,6 @@
       </div>
     </section>
 
-    <!-- Comparaison Budget vs Réel -->
     <section class="card">
       <div class="card-padded">
         <h2 class="analysis-title">🎯 Budget vs Réel</h2>
@@ -1163,7 +1151,6 @@
   <!-- ==================== SHEETS ==================== -->
   <div class="sheet-backdrop" id="sheetBackdrop"></div>
 
-  <!-- Sheet : Versement ponctuel -->
   <div class="sheet" id="sheetContribution">
     <div class="sheet-handle"></div>
     <h2>Nouveau versement ponctuel</h2>
@@ -1189,7 +1176,6 @@
     </form>
   </div>
 
-  <!-- Sheet : Nouvelle dépense -->
   <div class="sheet" id="sheetExpense">
     <div class="sheet-handle"></div>
     <h2>Nouvelle dépense</h2>
@@ -1219,7 +1205,6 @@
     </form>
   </div>
 
-  <!-- Sheet : Nouvelle récurrente -->
   <div class="sheet" id="sheetRecurring">
     <div class="sheet-handle"></div>
     <h2>Nouvelle récurrente</h2>
@@ -1245,7 +1230,6 @@
     </form>
   </div>
 
-  <!-- Sheet : Catégorie -->
   <div class="sheet" id="sheetCategory">
     <div class="sheet-handle"></div>
     <h2 id="categorySheetTitle">Nouvelle catégorie</h2>
@@ -1336,7 +1320,7 @@
       expenses: []
     };
     let ui = {
-      sections: { contributions: true, recurring: true, expenses: true, categories: false, settings: false },
+      sections: { recurring: true, expenses: true, contributions: true, categories: false },
       editingCategoryId: null,
       activeFilter: 'all',
       activeSheet: null,
@@ -1736,7 +1720,6 @@
       const daysInMonth = new Date(year, month + 1, 0).getDate();
       const today = now.getDate();
 
-      // Dépenses par jour du mois (ponctuelles)
       const dailySpent = new Array(daysInMonth + 1).fill(0);
       state.expenses.forEach(e => {
         const d = new Date(e.date);
@@ -1744,13 +1727,11 @@
           dailySpent[d.getDate()] += Number(e.amount) || 0;
         }
       });
-      // Récurrentes payées → comptées "aujourd'hui"
       const recurringPaidTotal = state.recurring
         .filter(r => r.paid)
         .reduce((s, r) => s + (Number(r.amount) || 0), 0);
       dailySpent[today] += recurringPaidTotal;
 
-      // Cumul
       const cumul = [];
       let sum = 0;
       for (let d = 1; d <= daysInMonth; d++) {
@@ -1774,7 +1755,6 @@
       const remaining = budget - spent;
       const perDayLeft = daysLeft > 0 ? remaining / daysLeft : remaining;
 
-      // Top catégorie
       let topCat = null;
       let topAmount = 0;
       state.config.categories.forEach(c => {
@@ -1857,7 +1837,6 @@
         return;
       }
 
-      // Dessiner les tranches
       const radius = size/2 - 6;
       const innerRadius = size/3.5;
       let startAngle = -Math.PI / 2;
@@ -1876,7 +1855,6 @@
         startAngle += slice;
       });
 
-      // Texte central
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.font = 'bold 15px -apple-system, sans-serif';
@@ -1886,7 +1864,6 @@
       ctx.fillStyle = '#8b95a8';
       ctx.fillText('dépensé', size/2, size/2 + 10);
 
-      // Légende
       legend.innerHTML = catTotals.map((x, i) => {
         const pct = ((x.amount / total) * 100).toFixed(0);
         return `<div class="legend-item" style="animation-delay:${i * 0.04}s">
@@ -1901,8 +1878,7 @@
       const canvas = $('evolutionChart');
       if (!canvas) return;
 
-      // Mesurer la largeur réelle
-      const parentWidth = canvas.parentElement.clientWidth - 36; // padding card
+      const parentWidth = canvas.parentElement.clientWidth - 36;
       if (parentWidth <= 0) return;
 
       const dpr = window.devicePixelRatio || 1;
@@ -1936,7 +1912,6 @@
       const maxSpent = Math.max(...cumul.map(c => c.spent), 0);
       const maxY = Math.max(budget, maxSpent) * 1.15 || 100;
 
-      // Grille Y
       ctx.font = '9px -apple-system, sans-serif';
       ctx.textBaseline = 'middle';
       ctx.textAlign = 'right';
@@ -1954,7 +1929,6 @@
         ctx.fillText(Math.round(yVal) + '€', padding.left - 4, y);
       }
 
-      // Labels X (début, milieu, fin)
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
       ctx.fillStyle = '#5a6478';
@@ -1964,7 +1938,6 @@
         ctx.fillText(String(d), x, h - padding.bottom + 6);
       });
 
-      // Ligne budget (rouge pointillé horizontal)
       if (budget > 0 && budget <= maxY) {
         const y = padding.top + chartH - (budget / maxY) * chartH;
         ctx.setLineDash([4, 4]);
@@ -1976,7 +1949,6 @@
         ctx.setLineDash([]);
       }
 
-      // Ligne idéale (violet pointillé)
       if (budget > 0) {
         ctx.setLineDash([3, 3]);
         ctx.strokeStyle = 'rgba(139,92,246,0.5)';
@@ -1988,7 +1960,6 @@
         ctx.setLineDash([]);
       }
 
-      // Courbe de cumul réel
       const points = [];
       for (let i = 0; i < today && i < cumul.length; i++) {
         const c = cumul[i];
@@ -1998,7 +1969,6 @@
       }
 
       if (points.length > 0) {
-        // Aire sous la courbe
         ctx.beginPath();
         ctx.moveTo(points[0].x, padding.top + chartH);
         points.forEach(p => ctx.lineTo(p.x, p.y));
@@ -2010,7 +1980,6 @@
         ctx.fillStyle = grad;
         ctx.fill();
 
-        // Ligne
         ctx.beginPath();
         points.forEach((p, i) => {
           if (i === 0) ctx.moveTo(p.x, p.y);
@@ -2021,7 +1990,6 @@
         ctx.lineJoin = 'round';
         ctx.stroke();
 
-        // Point actuel
         const last = points[points.length - 1];
         ctx.beginPath();
         ctx.arc(last.x, last.y, 4, 0, Math.PI * 2);
@@ -2044,7 +2012,6 @@
         return;
       }
 
-      // Trier par % d'utilisation décroissant
       const items = state.config.categories.map(cat => {
         const spent = getSpentByCategory(cat.id);
         const cap = Number(cat.cap) || 0;
@@ -2229,12 +2196,10 @@
 
     // ============ ÉVÉNEMENTS ============
     function bindEvents() {
-      // Tabs
       document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => switchTab(btn.dataset.tab));
       });
 
-      // Sections pliables
       document.querySelectorAll('[data-toggle]').forEach(header => {
         header.addEventListener('click', () => {
           const key = header.dataset.toggle;
@@ -2244,11 +2209,9 @@
         });
       });
 
-      // Contribution de base
       $('contributionInput').addEventListener('change', (e) => setContributionPerPerson(e.target.value));
       $('contributionInput').addEventListener('blur', (e) => setContributionPerPerson(e.target.value));
 
-      // FAB
       $('fabAddExpense').addEventListener('click', () => {
         $('expDate').value = new Date().toISOString().split('T')[0];
         $('expAmount').value = '';
@@ -2257,7 +2220,6 @@
         setTimeout(() => $('expAmount').focus(), 350);
       });
 
-      // Ouvrir sheets
       document.querySelectorAll('[data-open-sheet]').forEach(btn => {
         btn.addEventListener('click', () => {
           const sheetId = btn.dataset.openSheet;
@@ -2279,7 +2241,6 @@
         });
       });
 
-      // Fermer sheets
       document.querySelectorAll('[data-close-sheet]').forEach(btn => {
         btn.addEventListener('click', closeSheet);
       });
@@ -2288,7 +2249,6 @@
         if (e.key === 'Escape' && ui.activeSheet) closeSheet();
       });
 
-      // Form versement
       $('contributionForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const ok = await addContribution(
@@ -2299,7 +2259,6 @@
         if (ok) closeSheet();
       });
 
-      // Form dépense
       $('expenseForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const amount = parseAmount($('expAmount').value);
@@ -2310,7 +2269,6 @@
         closeSheet();
       });
 
-      // Form récurrente
       $('recurringForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const ok = await addRecurring(
@@ -2319,13 +2277,11 @@
         if (ok) closeSheet();
       });
 
-      // Form catégorie
       $('categoryForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         await saveCategory($('catEmoji').value, $('catName').value, $('catCap').value);
       });
 
-      // Filtres
       $('filterBar').addEventListener('click', (e) => {
         if (!e.target.classList.contains('filter-btn')) return;
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -2334,11 +2290,9 @@
         renderExpenses();
       });
 
-      // Clôturer
       $('closeMonthBtn').addEventListener('click', closeMonth);
       $('bannerCloseBtn').addEventListener('click', closeMonth);
 
-      // Back to top
       const backBtn = $('backToTop');
       window.addEventListener('scroll', () => {
         if (window.scrollY > 400) backBtn.classList.add('visible');
@@ -2348,7 +2302,6 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
 
-      // Redraw charts on resize/orientation
       let resizeTimer;
       window.addEventListener('resize', () => {
         if (ui.activeTab !== 'analysis') return;
