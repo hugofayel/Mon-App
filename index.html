@@ -343,23 +343,36 @@
   <!-- Toast notification -->
   <div class="toast" id="toast"></div>
 
-  <script>
-    (function() {
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+    import {
+      getFirestore, collection, doc, onSnapshot,
+      addDoc, setDoc, deleteDoc, getDocs
+    } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAX8IjYlgjL6k9v0yDaRbPYdtk7V08bYO8",
+      authDomain: "app-budget-e4d59.firebaseapp.com",
+      projectId: "app-budget-e4d59",
+      storageBucket: "app-budget-e4d59.firebasestorage.app",
+      messagingSenderId: "706775961953",
+      appId: "1:706775961953:web:7cb9100e161fe61d193520"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    (async function() {
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js');
       }
 
       // ---- Configuration ----
       const DEFAULT_BUDGET = 1735;
-      const STORAGE_BUDGET = 'mes_depenses_budget';
-      let monthlyBudget = parseFloat(localStorage.getItem(STORAGE_BUDGET)) || DEFAULT_BUDGET;
-      const WARNING_THRESHOLD = 95; // Seuil d'alerte orange à 95%
+      const WARNING_THRESHOLD = 95;
 
-      function saveBudget() {
-        localStorage.setItem(STORAGE_BUDGET, monthlyBudget);
-      }
-
-      // Couleurs par catégorie (harmonisées)
       const categoryColors = {
         "📦 Autres": "#8b8fa3",
         "🍔 Alimentation": "#f59e0b",
@@ -372,10 +385,8 @@
         "👨‍👩‍👧‍👦 Famille": "#2dd4bf"
       };
 
-      // Filtre actif
       let activeFilter = 'all';
 
-      // Dépenses récurrentes par défaut
       const defaultRecurring = [
         { id: 'r1', label: 'Forfait mobile', cat: '📱 Abonnements', defaultAmount: 10.99 },
         { id: 'r2', label: 'Apple', cat: '📱 Abonnements', defaultAmount: 2.99 },
@@ -388,18 +399,13 @@
         { id: 'r9', label: 'Virement compte commun', cat: '👨‍👩‍👧‍👦 Famille', defaultAmount: 1300.00 }
       ];
 
-      // Stockage local
-      const STORAGE_EXPENSES = 'mes_depenses_expenses';
-      const STORAGE_CHECKLIST = 'mes_depenses_checklist';
+      // ---- État local (synchronisé depuis Firestore) ----
+      let expenses = [];
+      let checklistState = {};
+      let monthlyBudget = DEFAULT_BUDGET;
 
-      let expenses = JSON.parse(localStorage.getItem(STORAGE_EXPENSES)) || [];
-      let checklistState = JSON.parse(localStorage.getItem(STORAGE_CHECKLIST)) || {};
-
-      // Initialiser l'état de la checklist si vide
       defaultRecurring.forEach(item => {
-        if (!checklistState[item.id]) {
-          checklistState[item.id] = { checked: false, amount: item.defaultAmount };
-        }
+        checklistState[item.id] = { checked: false, amount: item.defaultAmount };
       });
 
       // ---- Toast ----
@@ -411,15 +417,7 @@
         toast._timeout = setTimeout(() => toast.classList.remove('show'), duration);
       }
 
-      // ---- Sauvegardes ----
-      function saveExpenses() {
-        localStorage.setItem(STORAGE_EXPENSES, JSON.stringify(expenses));
-      }
-      function saveChecklist() {
-        localStorage.setItem(STORAGE_CHECKLIST, JSON.stringify(checklistState));
-      }
-
-      // ---- Mois en cours ----
+      // ---- Mois ----
       function updateMonthBadge() {
         const now = new Date();
         const mois = ['Janvier','Février','Mars','Avril','Mai','Juin',
@@ -427,13 +425,14 @@
         document.getElementById('monthBadge').textContent = `${mois[now.getMonth()]} ${now.getFullYear()}`;
       }
 
-      // ---- Fonctions de mise à jour ----
+      // ---- Budget ----
       function getTotalSpent() {
         return expenses.reduce((sum, e) => sum + e.amount, 0);
       }
 
       function updateBudgetDisplay() {
-        document.getElementById('budgetTotalDisplay').textContent = '/ ' + monthlyBudget.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' €';
+        document.getElementById('budgetTotalDisplay').textContent =
+          '/ ' + monthlyBudget.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' €';
       }
 
       function updateBudgetBar() {
@@ -441,19 +440,14 @@
         const percent = Math.min((total / monthlyBudget) * 100, 100);
         const fill = document.getElementById('progressFill');
         fill.style.width = percent + '%';
-        
         fill.classList.remove('warning', 'danger');
-        if (percent >= 100) {
-          fill.classList.add('danger');
-        } else if (percent >= WARNING_THRESHOLD) {
-          fill.classList.add('warning');
-        }
+        if (percent >= 100) fill.classList.add('danger');
+        else if (percent >= WARNING_THRESHOLD) fill.classList.add('warning');
 
         document.getElementById('currentSpent').textContent = total.toFixed(2).replace('.', ',') + ' €';
         document.getElementById('percentDisplay').textContent = percent.toFixed(1) + '% utilisé';
         updateBudgetDisplay();
 
-        // Budget restant
         const remaining = monthlyBudget - total;
         const remainingEl = document.getElementById('budgetRemaining');
         if (remaining >= 0) {
@@ -465,7 +459,7 @@
         }
       }
 
-      // ---- Diagramme circulaire ----
+      // ---- Diagramme ----
       function drawPieChart() {
         const canvas = document.getElementById('pieChart');
         const ctx = canvas.getContext('2d');
@@ -504,13 +498,11 @@
           startAngle += sliceAngle;
         });
 
-        // Cercle central (donut)
         ctx.beginPath();
         ctx.arc(size/2, size/2, size/3, 0, Math.PI * 2);
         ctx.fillStyle = '#1e293b';
         ctx.fill();
 
-        // Légende avec animation
         const legendContainer = document.getElementById('chartLegend');
         legendContainer.innerHTML = categories.map(([cat, amount], idx) => {
           const percent = ((amount / totalExpenses) * 100).toFixed(1);
@@ -522,58 +514,14 @@
         }).join('');
       }
 
-      // ---- Gestion des dépenses récurrentes ----
-      function handleRecurringToggle(itemId, checked) {
-        const item = defaultRecurring.find(i => i.id === itemId);
-        if (!item) return;
-        const amount = checklistState[itemId].amount;
-
-        if (checked) {
-          expenses.push({
-            amount: amount,
-            category: item.cat,
-            date: new Date().toISOString().split('T')[0],
-            note: item.label,
-            recurringId: itemId,
-            id: Date.now() + Math.random()
-          });
-          showToast('✅ ' + item.label + ' ajouté');
-        } else {
-          expenses = expenses.filter(e => e.recurringId !== itemId);
-          showToast('↩️ ' + item.label + ' retiré');
-        }
-        saveExpenses();
-        renderExpenseList();
-        updateBudgetBar();
-        drawPieChart();
-      }
-
-      function handleAmountChange(itemId, newAmount) {
-        newAmount = parseFloat(newAmount);
-        if (isNaN(newAmount) || newAmount < 0) return;
-        checklistState[itemId].amount = newAmount;
-        saveChecklist();
-
-        const expense = expenses.find(e => e.recurringId === itemId);
-        if (expense) {
-          expense.amount = newAmount;
-          saveExpenses();
-          renderExpenseList();
-          updateBudgetBar();
-          drawPieChart();
-        }
-        renderChecklist(); // Mettre à jour l'affichage du montant
-      }
-
+      // ---- Checklist récurrente ----
       function renderChecklist() {
         const container = document.getElementById('recurringList');
         container.innerHTML = defaultRecurring.map((item, idx) => {
-          const state = checklistState[item.id];
-          const checked = state ? state.checked : false;
-          const amount = state ? state.amount : item.defaultAmount;
-          const amountFormatted = amount.toFixed(2).replace('.', ',');
+          const state = checklistState[item.id] || { checked: false, amount: item.defaultAmount };
+          const amountFormatted = state.amount.toFixed(2).replace('.', ',');
           return `<div class="recurring-item" style="animation: fadeInUp 0.3s ease ${idx * 0.03}s both;">
-            <input type="checkbox" data-id="${item.id}" ${checked ? 'checked' : ''}>
+            <input type="checkbox" data-id="${item.id}" ${state.checked ? 'checked' : ''}>
             <div class="recurring-label">
               <div class="recurring-label-top">
                 <span>${item.label} <span class="recurring-cat">${item.cat}</span></span>
@@ -585,21 +533,20 @@
         }).join('');
 
         container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-          cb.addEventListener('change', (e) => {
+          cb.addEventListener('change', async (e) => {
             const id = e.target.dataset.id;
             checklistState[id].checked = e.target.checked;
-            saveChecklist();
-            handleRecurringToggle(id, e.target.checked);
+            await handleRecurringToggle(id, e.target.checked);
           });
         });
 
         container.querySelectorAll('.recurring-amount-input').forEach(input => {
-          input.addEventListener('change', (e) => {
+          input.addEventListener('change', async (e) => {
             const id = e.target.dataset.id;
             const raw = e.target.value.replace(',', '.');
             const val = parseFloat(raw);
             if (!isNaN(val) && val >= 0) {
-              handleAmountChange(id, val);
+              await handleAmountChange(id, val);
             } else {
               e.target.value = checklistState[id].amount.toFixed(2).replace('.', ',');
             }
@@ -607,28 +554,71 @@
         });
       }
 
-      // ---- Filtres ----
+      async function handleRecurringToggle(itemId, checked) {
+        const item = defaultRecurring.find(i => i.id === itemId);
+        if (!item) return;
+        const amount = checklistState[itemId].amount;
+
+        try {
+          await setDoc(doc(db, 'checklist', 'config'), {
+            [itemId]: { checked, amount }
+          }, { merge: true });
+
+          if (checked) {
+            await addDoc(collection(db, 'expenses'), {
+              amount: amount,
+              category: item.cat,
+              date: new Date().toISOString().split('T')[0],
+              note: item.label,
+              recurringId: itemId
+            });
+            showToast('✅ ' + item.label + ' ajouté');
+          } else {
+            const existing = expenses.find(e => e.recurringId === itemId);
+            if (existing) await deleteDoc(doc(db, 'expenses', existing.id));
+            showToast('↩️ ' + item.label + ' retiré');
+          }
+        } catch (err) {
+          console.error(err);
+          showToast('⚠️ Erreur de synchronisation');
+        }
+      }
+
+      async function handleAmountChange(itemId, newAmount) {
+        checklistState[itemId].amount = newAmount;
+        try {
+          await setDoc(doc(db, 'checklist', 'config'), {
+            [itemId]: { checked: checklistState[itemId].checked, amount: newAmount }
+          }, { merge: true });
+
+          const expense = expenses.find(e => e.recurringId === itemId);
+          if (expense) {
+            await setDoc(doc(db, 'expenses', expense.id), { amount: newAmount }, { merge: true });
+          }
+        } catch (err) {
+          console.error(err);
+          showToast('⚠️ Erreur de synchronisation');
+        }
+      }
+
+      // ---- Liste dépenses ----
       function getFilteredExpenses() {
         let filtered = [...expenses];
-        if (activeFilter === 'recurring') {
-          filtered = filtered.filter(e => e.recurringId);
-        } else if (activeFilter === 'ponctual') {
-          filtered = filtered.filter(e => !e.recurringId);
-        }
-        return filtered.sort((a,b) => new Date(b.date) - new Date(a.date));
+        if (activeFilter === 'recurring') filtered = filtered.filter(e => e.recurringId);
+        else if (activeFilter === 'ponctual') filtered = filtered.filter(e => !e.recurringId);
+        return filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
       }
 
       function renderExpenseList() {
         const container = document.getElementById('expenseList');
         const filtered = getFilteredExpenses();
-        
+
         if (filtered.length === 0) {
           container.innerHTML = '<p style="color:#64748b; padding:20px; text-align:center;">Aucune dépense trouvée</p>';
           return;
         }
 
         container.innerHTML = filtered.map((e, idx) => {
-          const originalIndex = expenses.indexOf(e);
           return `<div class="expense-item" style="animation-delay:${idx * 0.04}s">
             <div class="expense-info">
               <div class="expense-cat">${e.category}${e.recurringId ? '<span class="recurring-badge">récurrent</span>' : ''}</div>
@@ -636,54 +626,59 @@
               <div class="expense-date">${new Date(e.date).toLocaleDateString('fr-FR')}</div>
             </div>
             <span class="expense-amount">${e.amount.toFixed(2).replace('.', ',')} €</span>
-            <button class="delete-btn" data-index="${originalIndex}" title="Supprimer">🗑️</button>
+            <button class="delete-btn" data-id="${e.id}" title="Supprimer">🗑️</button>
           </div>`;
         }).join('');
       }
 
-      // ---- Suppression avec confirmation ----
-      function deleteExpense(index) {
-        const expense = expenses[index];
+      async function deleteExpense(expenseId) {
+        const expense = expenses.find(e => e.id === expenseId);
         if (!expense) return;
-        
-        const label = expense.note || expense.category;
-        if (!confirm(`Supprimer cette dépense ?\n\n"${label}"\n${expense.amount.toFixed(2).replace('.', ',')} €`)) {
-          return;
-        }
 
-        if (expense.recurringId) {
-          checklistState[expense.recurringId].checked = false;
-          saveChecklist();
-          renderChecklist();
+        const label = expense.note || expense.category;
+        if (!confirm(`Supprimer cette dépense ?\n\n"${label}"\n${expense.amount.toFixed(2).replace('.', ',')} €`)) return;
+
+        try {
+          if (expense.recurringId) {
+            await setDoc(doc(db, 'checklist', 'config'), {
+              [expense.recurringId]: {
+                checked: false,
+                amount: checklistState[expense.recurringId]?.amount || 0
+              }
+            }, { merge: true });
+          }
+          await deleteDoc(doc(db, 'expenses', expenseId));
+          showToast('🗑️ Dépense supprimée');
+        } catch (err) {
+          console.error(err);
+          showToast('⚠️ Erreur de suppression');
         }
-        expenses.splice(index, 1);
-        saveExpenses();
-        renderExpenseList();
-        updateBudgetBar();
-        drawPieChart();
-        showToast('🗑️ Dépense supprimée');
       }
 
       // ---- Remise à zéro ----
-      function fullReset() {
+      async function fullReset() {
         if (!confirm('⚠️ Supprimer TOUTES les dépenses et réinitialiser la checklist ?')) return;
         if (!confirm('Confirmation finale : cette action est irréversible. Continuer ?')) return;
 
-        expenses = [];
-        defaultRecurring.forEach(item => {
-          checklistState[item.id] = { checked: false, amount: item.defaultAmount };
-        });
-        saveExpenses();
-        saveChecklist();
-        renderChecklist();
-        renderExpenseList();
-        updateBudgetBar();
-        drawPieChart();
-        showToast('🔄 Compteurs remis à zéro');
+        try {
+          const snapshot = await getDocs(collection(db, 'expenses'));
+          await Promise.all(snapshot.docs.map(d => deleteDoc(d.ref)));
+
+          const resetState = {};
+          defaultRecurring.forEach(item => {
+            resetState[item.id] = { checked: false, amount: item.defaultAmount };
+          });
+          await setDoc(doc(db, 'checklist', 'config'), resetState);
+
+          showToast('🔄 Compteurs remis à zéro');
+        } catch (err) {
+          console.error(err);
+          showToast('⚠️ Erreur lors du reset');
+        }
       }
 
-      // ---- Écouteurs ----
-      document.getElementById('expenseForm').addEventListener('submit', function(e) {
+      // ---- Écouteurs UI ----
+      document.getElementById('expenseForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         const amount = parseFloat(document.getElementById('amount').value);
         const category = document.getElementById('category').value;
@@ -695,32 +690,26 @@
           return;
         }
 
-        expenses.push({
-          amount,
-          category,
-          date,
-          note: note || null,
-          id: Date.now()
-        });
-        saveExpenses();
-        renderExpenseList();
-        updateBudgetBar();
-        drawPieChart();
-        showToast('✅ Dépense ajoutée : ' + amount.toFixed(2).replace('.', ',') + ' €');
-        this.reset();
-        document.getElementById('date').value = '';
+        try {
+          await addDoc(collection(db, 'expenses'), {
+            amount, category, date, note: note || null, recurringId: null
+          });
+          showToast('✅ Dépense ajoutée : ' + amount.toFixed(2).replace('.', ',') + ' €');
+          this.reset();
+          document.getElementById('date').value = '';
+        } catch (err) {
+          console.error(err);
+          showToast('⚠️ Erreur d\'ajout');
+        }
       });
 
       document.getElementById('expenseList').addEventListener('click', function(e) {
         if (e.target.classList.contains('delete-btn')) {
-          const index = parseInt(e.target.dataset.index);
-          if (!isNaN(index) && index >= 0 && index < expenses.length) {
-            deleteExpense(index);
-          }
+          const id = e.target.dataset.id;
+          if (id) deleteExpense(id);
         }
       });
 
-      // Filtres
       document.getElementById('filterBar').addEventListener('click', function(e) {
         if (e.target.classList.contains('filter-btn')) {
           document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -732,7 +721,7 @@
 
       document.getElementById('resetButton').addEventListener('click', fullReset);
 
-      // ---- Édition du budget ----
+      // ---- Édition budget ----
       document.getElementById('budgetEditBtn').addEventListener('click', function() {
         document.getElementById('budgetEditRow').classList.add('active');
         document.getElementById('budgetEditInput').value = monthlyBudget;
@@ -743,25 +732,60 @@
         document.getElementById('budgetEditRow').classList.remove('active');
       });
 
-      document.getElementById('budgetEditSave').addEventListener('click', function() {
+      document.getElementById('budgetEditSave').addEventListener('click', async function() {
         const newBudget = parseFloat(document.getElementById('budgetEditInput').value);
         if (!isNaN(newBudget) && newBudget > 0) {
-          monthlyBudget = newBudget;
-          saveBudget();
-          updateBudgetBar();
-          drawPieChart();
-          document.getElementById('budgetEditRow').classList.remove('active');
-          showToast('💰 Budget mis à jour : ' + newBudget.toFixed(0) + ' €');
+          try {
+            await setDoc(doc(db, 'budget', 'config'), { monthlyBudget: newBudget });
+            monthlyBudget = newBudget;
+            updateBudgetBar();
+            document.getElementById('budgetEditRow').classList.remove('active');
+            showToast('💰 Budget mis à jour : ' + newBudget.toFixed(0) + ' €');
+          } catch (err) {
+            console.error(err);
+            showToast('⚠️ Erreur de sauvegarde');
+          }
         }
       });
 
-      // ---- Initialisation ----
+      // ---- Render initial ----
       document.getElementById('date').value = new Date().toISOString().split('T')[0];
       updateMonthBadge();
       renderChecklist();
       renderExpenseList();
       updateBudgetBar();
       drawPieChart();
+
+      // ---- Auth anonyme ----
+      try {
+        await signInAnonymously(auth);
+      } catch (err) {
+        console.error('Auth error:', err);
+        showToast('⚠️ Connexion Firebase impossible');
+        return;
+      }
+
+      // ---- Écouteurs temps réel Firestore ----
+      onSnapshot(doc(db, 'budget', 'config'), (snap) => {
+        monthlyBudget = snap.exists() ? snap.data().monthlyBudget : DEFAULT_BUDGET;
+        updateBudgetBar();
+      });
+
+      onSnapshot(collection(db, 'expenses'), (snapshot) => {
+        expenses = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderExpenseList();
+        updateBudgetBar();
+        drawPieChart();
+      });
+
+      onSnapshot(doc(db, 'checklist', 'config'), (snap) => {
+        const data = snap.exists() ? snap.data() : {};
+        checklistState = {};
+        defaultRecurring.forEach(item => {
+          checklistState[item.id] = data[item.id] || { checked: false, amount: item.defaultAmount };
+        });
+        renderChecklist();
+      });
     })();
   </script>
 </body>
